@@ -320,6 +320,7 @@ describe("whoami", () => {
 			──────────────────
 			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			🔐 Credentials are stored in: <cwd>/home/.config/.wrangler/config/default.toml
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
@@ -396,6 +397,7 @@ describe("whoami", () => {
 			──────────────────
 			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			🔐 Credentials are stored in: <cwd>/home/.config/.wrangler/config/default.toml
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
@@ -526,6 +528,7 @@ describe("whoami", () => {
 			──────────────────
 			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			🔐 Credentials are stored in: <cwd>/home/.config/.wrangler/config/default.toml
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤

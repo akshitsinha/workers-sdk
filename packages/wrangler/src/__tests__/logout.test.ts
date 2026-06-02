@@ -224,4 +224,70 @@ describe("logout", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(fs.existsSync(config)).toBeFalsy();
 	});
+
+	it("should clear the keyring entry, the encrypted file, and any legacy TOML when keyring storage is active", async ({
+		expect,
+	}) => {
+		const {
+			setKeyProviderFactoryForTesting,
+			resetCredentialStorageState,
+			getEncryptedAuthConfigFilePath,
+		} = await import("@cloudflare/workers-auth");
+		const { updateUserPreferences } = await import("../user/preferences");
+
+		const keyringStore = new Map<string, Uint8Array>();
+		setKeyProviderFactoryForTesting((serviceName) => ({
+			getKey: () => keyringStore.get(`${serviceName}::default`),
+			setKey: (key) => {
+				keyringStore.set(`${serviceName}::default`, key);
+			},
+			deleteKey: () => {
+				keyringStore.delete(`${serviceName}::default`);
+			},
+			describe: () => "in-memory test keyring",
+		}));
+		updateUserPreferences({ keyring_enabled: true });
+		resetCredentialStorageState();
+
+		// Pre-populate the encrypted file + keyring with credentials (as
+		// `wrangler login --use-keyring` would).
+		writeAuthConfigFile({
+			oauth_token: "kr-token",
+			refresh_token: "kr-refresh",
+		});
+
+		// And pre-populate the legacy plaintext file (as a previous wrangler
+		// install would have). Write directly to disk so we can prove
+		// `logout()` removes it defensively.
+		const legacyPath = getAuthConfigFilePath();
+		fs.mkdirSync(path.dirname(legacyPath), { recursive: true });
+		fs.writeFileSync(legacyPath, 'oauth_token = "stale-leftover"');
+
+		expect(keyringStore.size).toBe(1);
+		expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+		expect(fs.existsSync(legacyPath)).toBe(true);
+
+		msw.use(
+			http.post(
+				"*/oauth2/revoke",
+				() => HttpResponse.text("", { status: 200 }),
+				{ once: true }
+			)
+		);
+
+		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully logged out."
+		`);
+		expect(keyringStore.size).toBe(0);
+		expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+		expect(fs.existsSync(legacyPath)).toBe(false);
+
+		setKeyProviderFactoryForTesting(undefined);
+		resetCredentialStorageState();
+	});
 });

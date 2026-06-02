@@ -105,6 +105,13 @@ export interface OAuthFlowContext {
 
 	/**
 	 * Persistence backend for the stored auth config.
+	 *
+	 * Consumers that want OS-keyring-backed encryption opt in by passing the
+	 * `storage` from {@link createCredentialStorageContext} (in the
+	 * `credential-store` module) — that adapter resolves between the plaintext
+	 * TOML file and the encrypted-file-with-keyring-key implementation on every
+	 * call, so runtime preference changes (`--use-keyring` /
+	 * `CLOUDFLARE_AUTH_USE_KEYRING`) take effect without rebuilding the flow.
 	 */
 	storage: AuthConfigStorage;
 

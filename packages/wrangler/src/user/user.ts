@@ -9,13 +9,16 @@
 //     env, cache, or interactive `select` prompt)
 //   - `requireAuth` / `requireApiToken` — the high-level entry points used by
 //     wrangler's commands
+//   - Wiring the credential-storage layer (plaintext-TOML vs encrypted-file-
+//     with-keyring-key) into the OAuth flow
 
 import assert from "node:assert";
 import {
+	createCredentialStorageContext,
+	createOAuthFlow,
 	getAuthFromEnv as getAuthFromEnvShared,
 	readStoredAuthState,
 } from "@cloudflare/workers-auth";
-import { createOAuthFlow } from "@cloudflare/workers-auth";
 import {
 	configFileName,
 	getCloudflareComplianceRegion,
@@ -30,10 +33,7 @@ import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import {
-	createTomlFileStorage,
-	defaultAuthConfigStorage,
-} from "./auth-config-file";
+import { createTomlFileStorage } from "./auth-config-file";
 import {
 	getClientIdFromEnv,
 	getCloudflareAccountIdFromEnv,
@@ -41,31 +41,22 @@ import {
 import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
+import { readUserPreferences } from "./preferences";
 import { getTemporaryPreviewAccountConfigPath } from "./temporary-account-path";
 import { ensureTemporaryTermsAccepted } from "./temporary-terms";
 import type { Account } from "./shared";
 import type {
+	CredentialStore,
 	LoginOrRefreshResult,
 	LoginProps,
 	TemporaryPreviewAccount,
+	UserAuthConfig,
 } from "@cloudflare/workers-auth";
 import type {
 	ApiCredentials,
 	ComplianceConfig,
 } from "@cloudflare/workers-utils";
 
-/**
- * The single wrangler-wide OAuth flow instance.
- *
- * Wires the OAuth-flow primitives in `@cloudflare/workers-auth` to wrangler's
- * logger, browser opener, interactivity detector, and config cache.
- *
- * The `generateAuthUrl` and `generateRandomState` overrides come from
- * wrangler's local re-export shims so that the existing `vi.mock(...)` calls
- * in `vitest.setup.ts` (which produce deterministic snapshot URLs) continue to
- * apply — the mocked versions are injected via the context here and used
- * internally by `@cloudflare/workers-auth`.
- */
 /**
  * Wrangler's branded OAuth consent pages, shown to the user after they grant
  * or deny consent to Wrangler's OAuth app.
@@ -82,8 +73,38 @@ const WRANGLER_CONSENT_PAGES = {
 	},
 };
 
-const authConfigStorage = defaultAuthConfigStorage();
+/**
+ * Wrangler's credential-storage bundle.
+ *
+ * Plumbs the user-level keyring opt-in preference (the `keyring_enabled` flag
+ * in `<global-wrangler-config>/preferences.json`) into the storage resolver so
+ * the OAuth flow's reads/writes go through whichever store (plaintext TOML or
+ * encrypted-file-with-keyring-key) the user has chosen.
+ *
+ * The bundle's `storage` is re-resolved per call, so runtime preference flips
+ * (`wrangler login --use-keyring` / `--no-use-keyring` /
+ * `CLOUDFLARE_AUTH_USE_KEYRING`) take effect immediately.
+ */
+const credentialStorage = createCredentialStorageContext({
+	serviceName: "wrangler",
+	isKeyringEnabled: () => readUserPreferences().keyring_enabled === true,
+	logger,
+	isNonInteractiveOrCI,
+	cliName: "wrangler",
+});
 
+/**
+ * The single wrangler-wide OAuth flow instance.
+ *
+ * Wires the OAuth-flow primitives in `@cloudflare/workers-auth` to wrangler's
+ * logger, browser opener, interactivity detector, and config cache.
+ *
+ * The `generateAuthUrl` and `generateRandomState` overrides come from
+ * wrangler's local re-export shims so that the existing `vi.mock(...)` calls
+ * in `vitest.setup.ts` (which produce deterministic snapshot URLs) continue to
+ * apply — the mocked versions are injected via the context here and used
+ * internally by `@cloudflare/workers-auth`.
+ */
 const oauthFlow = createOAuthFlow({
 	logger,
 	isNonInteractiveOrCI,
@@ -93,7 +114,7 @@ const oauthFlow = createOAuthFlow({
 	clientId: getClientIdFromEnv,
 	consent: WRANGLER_CONSENT_PAGES,
 	redirectUri: OAUTH_CALLBACK_URL,
-	storage: authConfigStorage,
+	storage: credentialStorage.storage,
 	allowGlobalAuthKey: true,
 	temporary: {
 		storage: createTomlFileStorage<TemporaryPreviewAccount>(
@@ -104,6 +125,17 @@ const oauthFlow = createOAuthFlow({
 	generateAuthUrl,
 	generateRandomState,
 });
+
+/**
+ * The currently-active credential store, resolved per-call so runtime
+ * preference changes (`wrangler login --use-keyring` /
+ * `--no-use-keyring` / `CLOUDFLARE_AUTH_USE_KEYRING` env var) take
+ * effect immediately. Consumed by `wrangler whoami` to surface where
+ * credentials live.
+ */
+export function getCredentialStore(): CredentialStore {
+	return credentialStorage.getActiveStore();
+}
 
 /**
  * Mark whether `--temporary` is permitted for the current invocation.
@@ -222,7 +254,7 @@ export function listScopes(message = "💁 Available scopes:"): void {
 export function getScopes(): Scope[] | undefined {
 	return readStoredAuthState({
 		warningLogger: logger,
-		storage: authConfigStorage,
+		storage: credentialStorage.storage,
 	}).scopes as Scope[] | undefined;
 }
 
@@ -314,12 +346,25 @@ export async function getOAuthTokenFromLocalState(): Promise<
 	return oauthFlow.getOAuthTokenFromLocalState();
 }
 
-export {
-	getAuthConfigFilePath,
-	readAuthConfigFile,
-	writeAuthConfigFile,
-} from "./auth-config-file";
+export { getAuthConfigFilePath } from "./auth-config-file";
 export type { UserAuthConfig } from "@cloudflare/workers-auth";
+
+/**
+ * Read the user auth config via the active credential store (plaintext TOML
+ * by default; encrypted file when `--use-keyring` is in effect). Throws when
+ * no credentials are stored — callers wrap in try/catch and treat the throw
+ * as "not logged in via local OAuth".
+ */
+export function readAuthConfigFile(): UserAuthConfig {
+	return credentialStorage.storage.read();
+}
+
+/**
+ * Persist the user auth config via the active credential store.
+ */
+export function writeAuthConfigFile(config: UserAuthConfig): void {
+	credentialStorage.storage.write(config);
+}
 // `PKCE_CHARSET` is re-exported for any external consumers that used to
 // import it from this barrel.
 export { PKCE_CHARSET } from "@cloudflare/workers-auth";

@@ -1,11 +1,14 @@
+import { getCloudflareAuthUseKeyringFromEnv } from "@cloudflare/workers-auth";
 import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
 import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { readUserPreferences, updateUserPreferences } from "./preferences";
 import {
 	DefaultScopeKeys,
 	getAuthFromEnv,
+	getCredentialStore,
 	getOAuthTokenFromLocalState,
 	listScopes,
 	login,
@@ -61,12 +64,71 @@ export const loginCommand = createCommand({
 			requiresArg: false,
 			default: 8976,
 		},
+		"use-keyring": {
+			describe:
+				"Store OAuth credentials in the OS keychain (macOS Keychain, " +
+				"Windows Credential Manager, libsecret) instead of a plaintext " +
+				"TOML file. Pass `--no-use-keyring` to opt back out. The choice " +
+				"is persisted across `wrangler` invocations.",
+			type: "boolean",
+		},
 	},
 	async handler(args, { config }) {
 		if (args.scopesList) {
 			listScopes();
 			return;
 		}
+
+		// Persist `--use-keyring` / `--no-use-keyring` before doing the login
+		// so the OAuth callback writes credentials to the requested backend.
+		// The `CLOUDFLARE_AUTH_USE_KEYRING` env var still wins over the
+		// persistent preference, but we warn so the user isn't surprised.
+		if (args.useKeyring !== undefined) {
+			const previouslyEnabled = readUserPreferences().keyring_enabled === true;
+			const envOverride = getCloudflareAuthUseKeyringFromEnv();
+			if (envOverride !== undefined && envOverride !== args.useKeyring) {
+				logger.warn(
+					`CLOUDFLARE_AUTH_USE_KEYRING=${envOverride} overrides the --${args.useKeyring ? "use-keyring" : "no-use-keyring"} flag for this command.`
+				);
+			}
+
+			if (!args.useKeyring && previouslyEnabled) {
+				// Opting out: scrub the encrypted credentials and the keyring
+				// entry **without** decrypting them into a plaintext file —
+				// writing plaintext on disk during opt-out would defeat the
+				// at-rest protection the user just chose to disable, leaving
+				// the same credentials they wanted out of plaintext sitting
+				// on disk in plaintext anyway.
+				//
+				// We delete via the active store BEFORE updating the
+				// preference, so `getCredentialStore()` still resolves to the
+				// EncryptedFileCredentialStore (which knows how to remove
+				// both the `.enc` file and the keyring entry in one call).
+				try {
+					getCredentialStore().clear();
+					logger.log(
+						"Removed the encrypted credentials and the keyring entry. Run `wrangler login` to log in again."
+					);
+				} catch (e) {
+					logger.warn(
+						`Failed to remove encrypted credentials on opt-out: ${
+							e instanceof Error ? e.message : String(e)
+						}. You may need to clear them manually before logging in again.`
+					);
+				}
+			}
+
+			updateUserPreferences({ keyring_enabled: args.useKeyring });
+
+			if (args.useKeyring) {
+				// Resolve the credential store eagerly so any platform-specific
+				// install (Windows lazy-install of @napi-rs/keyring) or probe
+				// failure (Linux missing secret-tool, CI without TTY) surfaces
+				// before the user sits through the OAuth flow.
+				getCredentialStore();
+			}
+		}
+
 		// Validate `--scopes` up front so we can share a single `login(...)`
 		// call (and a single `sendMetricsEvent("login user", ...)` site) between
 		// the scoped and unscoped paths.

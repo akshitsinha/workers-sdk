@@ -482,6 +482,147 @@ describe("User", () => {
 				sendMetricsEventSpy.mockRestore();
 			}
 		});
+
+		it("--use-keyring stores credentials in an encrypted file with a key in the OS keyring", async ({
+			expect,
+		}) => {
+			// Install an in-memory KeyProvider so the test never touches the
+			// real keychain. The KeyProvider holds the encryption key; the
+			// encrypted credential blob lives in a `.enc` file on disk.
+			const {
+				setKeyProviderFactoryForTesting,
+				resetCredentialStorageState,
+				getEncryptedAuthConfigFilePath,
+			} = await import("@cloudflare/workers-auth");
+			const keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName) => ({
+				getKey: () => keyringStore.get(`${serviceName}::default`),
+				setKey: (key) => {
+					keyringStore.set(`${serviceName}::default`, key);
+				},
+				deleteKey: () => {
+					keyringStore.delete(`${serviceName}::default`);
+				},
+				describe: () => "in-memory test keyring",
+			}));
+			resetCredentialStorageState();
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --use-keyring");
+
+			// Legacy plaintext TOML must not be created on a fresh
+			// `--use-keyring` login.
+			expect(fs.existsSync(getAuthConfigFilePath())).toBe(false);
+			// Encrypted file should be present, and the keyring should hold
+			// the encryption key.
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+			// `readAuthConfigFile()` routes through the active store, which
+			// decrypts the encrypted file using the keyring-held key.
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+			// The on-disk ciphertext must not contain the cleartext token.
+			expect(
+				fs.readFileSync(getEncryptedAuthConfigFilePath(), "utf8")
+			).not.toContain("test-access-token");
+
+			setKeyProviderFactoryForTesting(undefined);
+			resetCredentialStorageState();
+		});
+
+		it("--no-use-keyring scrubs encrypted credentials without writing them to plaintext, then the fresh login uses the file store", async ({
+			expect,
+		}) => {
+			const {
+				setKeyProviderFactoryForTesting,
+				resetCredentialStorageState,
+				getEncryptedAuthConfigFilePath,
+			} = await import("@cloudflare/workers-auth");
+			const { updateUserPreferences } = await import("../user/preferences");
+			const keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName) => ({
+				getKey: () => keyringStore.get(`${serviceName}::default`),
+				setKey: (key) => {
+					keyringStore.set(`${serviceName}::default`, key);
+				},
+				deleteKey: () => {
+					keyringStore.delete(`${serviceName}::default`);
+				},
+				describe: () => "in-memory test keyring",
+			}));
+			// Seed the persistent opt-in so the --no-use-keyring flag has
+			// something to override, and pre-populate the encrypted store
+			// with stale credentials so we can prove opt-out scrubs them
+			// (rather than decrypting them onto disk in plaintext).
+			updateUserPreferences({ keyring_enabled: true });
+			resetCredentialStorageState();
+			writeAuthConfigFile({
+				oauth_token: "stale-encrypted-token",
+				refresh_token: "stale-encrypted-refresh",
+			});
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "new-plaintext-token",
+							expires_in: 100000,
+							refresh_token: "new-plaintext-refresh",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --no-use-keyring");
+
+			// Encrypted file and keyring entry must both be scrubbed —
+			// opt-out should NOT decrypt the credentials onto disk in
+			// plaintext, because that would defeat the at-rest protection
+			// the user is choosing to disable.
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+			expect(keyringStore.size).toBe(0);
+
+			// The fresh login that follows opt-out writes the *new* tokens
+			// into the plaintext TOML file via the file store.
+			expect(fs.existsSync(getAuthConfigFilePath())).toBe(true);
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				oauth_token: "new-plaintext-token",
+				refresh_token: "new-plaintext-refresh",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+			// Critically, the old encrypted-store credentials must not
+			// appear on disk anywhere.
+			expect(fs.readFileSync(getAuthConfigFilePath(), "utf8")).not.toContain(
+				"stale-encrypted-token"
+			);
+
+			setKeyProviderFactoryForTesting(undefined);
+			resetCredentialStorageState();
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async ({
