@@ -13,7 +13,7 @@ export interface UserPreferences {
 	/**
 	 * When `true`, OAuth credentials are stored in the OS keychain rather than
 	 * the legacy plaintext TOML file. Set by `wrangler login --use-keyring` and
-	 * cleared by `wrangler login --no-keyring`.
+	 * cleared by `wrangler login --no-use-keyring`.
 	 */
 	keyring_enabled?: boolean;
 }
