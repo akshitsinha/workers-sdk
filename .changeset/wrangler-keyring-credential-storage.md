@@ -9,7 +9,7 @@ Add opt-in OS keychain storage for OAuth credentials
 
 The choice is persisted across `wrangler` invocations. The environment variable `CLOUDFLARE_AUTH_USE_KEYRING=true|false` overrides the persistent preference for one-off use. The legacy plaintext file remains the default, so existing users see no behavior change.
 
-### Per-platform backends
+#### Per-platform backends
 
 Wrangler ships with **zero native credential dependencies**. Each platform uses whatever is already there:
 
@@ -17,13 +17,13 @@ Wrangler ships with **zero native credential dependencies**. Each platform uses 
 - **Linux**: `secret-tool` from `libsecret-tools` (already installed on most Linux desktops; wrangler prints a per-distro install hint when missing).
 - **Windows**: `@napi-rs/keyring` is lazy-installed via `npm install` on first opt-in (~1.9 MB one-time download). Non-interactive contexts (CI, scripts) get an actionable hard error with the option to install globally with `npm install -g @napi-rs/keyring@<pinned-version>` or to disable keyring storage entirely.
 
-### Encryption details
+#### Encryption details
 
 - The encrypted file lives at `<wrangler-config>/config/<env>.enc`, alongside the legacy `<env>.toml` so migration is non-destructive.
 - The on-disk format is a JSON envelope `{ v, alg: "AES-256-GCM", iv, tag, ciphertext }`. The auth tag prevents tampering — any corruption or wrong key is detected and treated as "not logged in".
 - The keyring entry stores only a 32-byte symmetric key (wrapped in a small JSON envelope for forward-compat), well below the macOS Keychain ~2.5 KB per-item limit, so the encrypted credential blob is free to grow as the schema evolves.
 
-### Internal architecture
+#### Internal architecture
 
 The credential persistence layer has moved into `@cloudflare/workers-auth`. `createOAuthFlow(ctx)` now requires a `credentialStorage` block (`serviceName`, `isKeyringEnabled` callback, optional `cliName`) and returns a new `getCredentialStore()` accessor for `whoami`-style code. Future Cloudflare CLIs that reuse `workers-auth` get the same OS keyring–encrypted credential storage by providing their own `serviceName`.
 
