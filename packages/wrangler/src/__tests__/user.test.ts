@@ -623,6 +623,101 @@ describe("User", () => {
 			setKeyProviderFactoryForTesting(undefined);
 			resetCredentialStorageState();
 		});
+
+		it("--no-use-keyring still scrubs the encrypted credentials and keyring entry when CLOUDFLARE_AUTH_USE_KEYRING=false is set (the env var must not defeat the opt-out scrub)", async ({
+			expect,
+		}) => {
+			// Regression test: with CLOUDFLARE_AUTH_USE_KEYRING=false set,
+			// the credential-store resolver short-circuits to
+			// FileCredentialStore (resolver.ts lines 32-34). Going through
+			// `getCredentialStore()` for the opt-out scrub would therefore
+			// delete only the plaintext `.toml` and leave the `.enc` file
+			// and the keyring entry intact. The opt-out path must resolve
+			// the encrypted store directly to guarantee the scrub targets
+			// the backend the user is opting out of regardless of the
+			// env-var state.
+			//
+			// Models the realistic user scenario: a prior session opted
+			// into keyring storage (no env var, or env var allowed it),
+			// and a later session has CLOUDFLARE_AUTH_USE_KEYRING=false in
+			// the shell when running `wrangler login --no-use-keyring`.
+			const {
+				setKeyProviderFactoryForTesting,
+				resetCredentialStorageState,
+				getEncryptedAuthConfigFilePath,
+			} = await import("@cloudflare/workers-auth");
+			const { updateUserPreferences } = await import("../user/preferences");
+			const keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName) => ({
+				getKey: () => keyringStore.get(`${serviceName}::default`),
+				setKey: (key) => {
+					keyringStore.set(`${serviceName}::default`, key);
+				},
+				deleteKey: () => {
+					keyringStore.delete(`${serviceName}::default`);
+				},
+				describe: () => "in-memory test keyring",
+			}));
+			// Seed the persistent opt-in and pre-populate the encrypted
+			// store with stale credentials so we can prove the scrub runs
+			// against the encrypted backend even with the env var set.
+			// The seed runs *before* stubbing the env var so the resolver
+			// still picks the encrypted store for the seed write.
+			updateUserPreferences({ keyring_enabled: true });
+			resetCredentialStorageState();
+			writeAuthConfigFile({
+				oauth_token: "stale-encrypted-token",
+				refresh_token: "stale-encrypted-refresh",
+			});
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+
+			// Now stub the env var to model the later session. From this
+			// point on the resolver short-circuits to FileCredentialStore.
+			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "false");
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "new-plaintext-token",
+							expires_in: 100000,
+							refresh_token: "new-plaintext-refresh",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --no-use-keyring");
+
+			// Without the fix, the resolver would short-circuit to the
+			// file store on the env var and neither of these would hold:
+			// the `.enc` file and the keyring entry would still be on
+			// disk after opt-out.
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+			expect(keyringStore.size).toBe(0);
+
+			// The fresh login that follows opt-out writes the *new*
+			// tokens into the plaintext TOML file via the file store.
+			expect(fs.existsSync(getAuthConfigFilePath())).toBe(true);
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				oauth_token: "new-plaintext-token",
+				refresh_token: "new-plaintext-refresh",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+			// The old encrypted-store credentials must not leak into
+			// plaintext anywhere on disk.
+			expect(fs.readFileSync(getAuthConfigFilePath(), "utf8")).not.toContain(
+				"stale-encrypted-token"
+			);
+
+			setKeyProviderFactoryForTesting(undefined);
+			resetCredentialStorageState();
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async ({

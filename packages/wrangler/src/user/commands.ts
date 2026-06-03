@@ -1,4 +1,10 @@
-import { getCloudflareAuthUseKeyringFromEnv } from "@cloudflare/workers-auth";
+import { existsSync, rmSync } from "node:fs";
+import {
+	EncryptedFileCredentialStore,
+	getCloudflareAuthUseKeyringFromEnv,
+	getEncryptedAuthConfigFilePath,
+	resolveKeyProvider,
+} from "@cloudflare/workers-auth";
 import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
 import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
@@ -14,6 +20,7 @@ import {
 	login,
 	logout,
 	validateScopeKeys,
+	WRANGLER_KEYRING_SERVICE_NAME,
 } from "./user";
 import { whoami } from "./whoami";
 
@@ -100,15 +107,39 @@ export const loginCommand = createCommand({
 				// the same credentials they wanted out of plaintext sitting
 				// on disk in plaintext anyway.
 				//
-				// We delete via the active store BEFORE updating the
-				// preference, so `getCredentialStore()` still resolves to the
-				// EncryptedFileCredentialStore (which knows how to remove
-				// both the `.enc` file and the keyring entry in one call).
+				// We bypass `getCredentialStore()` here because the resolver
+				// short-circuits to `FileCredentialStore` when
+				// `CLOUDFLARE_AUTH_USE_KEYRING=false` is set in the
+				// environment (see `resolver.ts`). `FileCredentialStore.delete()`
+				// only removes the plaintext `.toml`, which would leave the
+				// `.enc` file and the keyring entry intact. Resolving the
+				// encrypted store directly guarantees the scrub always
+				// targets the backend the user is opting *out of*,
+				// regardless of the env-var state.
 				try {
-					getCredentialStore().clear();
-					logger.log(
-						"Removed the encrypted credentials and the keyring entry. Run `wrangler login` to log in again."
-					);
+					const resolution = resolveKeyProvider(WRANGLER_KEYRING_SERVICE_NAME);
+					if (resolution.kind === "available") {
+						new EncryptedFileCredentialStore(resolution.provider).clear();
+						logger.log(
+							"Removed the encrypted credentials and the keyring entry. Run `wrangler login` to log in again."
+						);
+					} else {
+						// The keyring backend is unreachable on this host right
+						// now (e.g. Linux without `secret-tool`, Windows without
+						// the lazy-installed `@napi-rs/keyring` binding). The
+						// user previously opted in successfully, so an `.enc`
+						// file may still be on disk — scrub it best-effort. The
+						// ciphertext is useless without the key, but stale
+						// files are confusing and could collide with a future
+						// opt-in.
+						const encryptedPath = getEncryptedAuthConfigFilePath();
+						if (existsSync(encryptedPath)) {
+							rmSync(encryptedPath);
+						}
+						logger.warn(
+							"Removed the encrypted credentials file, but the keyring backend was not reachable on this host so the keyring entry could not be cleared. Clear it manually if it persists. Run `wrangler login` to log in again."
+						);
+					}
 				} catch (e) {
 					logger.warn(
 						`Failed to remove encrypted credentials on opt-out: ${

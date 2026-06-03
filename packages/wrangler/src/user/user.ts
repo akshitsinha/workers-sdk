@@ -58,6 +58,18 @@ import type {
 } from "@cloudflare/workers-utils";
 
 /**
+ * Keyring service identifier passed to `createCredentialStorageContext` and to
+ * the opt-out scrub in `commands.ts`. Defined here so both sites stay in
+ * sync — this becomes the `-s` arg to macOS `security`, the `service`
+ * attribute for Linux `secret-tool`, and the `service` arg to
+ * `@napi-rs/keyring`'s `Entry` on Windows. The opt-out scrub in
+ * `commands.ts` bypasses the credential-store resolver (which can be
+ * short-circuited by `CLOUDFLARE_AUTH_USE_KEYRING=false`) and so needs
+ * the same identifier directly.
+ */
+export const WRANGLER_KEYRING_SERVICE_NAME = "wrangler";
+
+/**
  * Wrangler's branded OAuth consent pages, shown to the user after they grant
  * or deny consent to Wrangler's OAuth app.
  */
@@ -86,7 +98,7 @@ const WRANGLER_CONSENT_PAGES = {
  * `CLOUDFLARE_AUTH_USE_KEYRING`) take effect immediately.
  */
 const credentialStorage = createCredentialStorageContext({
-	serviceName: "wrangler",
+	serviceName: WRANGLER_KEYRING_SERVICE_NAME,
 	isKeyringEnabled: () => readUserPreferences().keyring_enabled === true,
 	logger,
 	isNonInteractiveOrCI,
