@@ -525,6 +525,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				: undefined,
 		observability: config.observability,
 		cache: config.cache,
+		package_dependencies: props.packageDependencies,
 	};
 
 	const sourceMapSize = worker.sourceMaps?.reduce(

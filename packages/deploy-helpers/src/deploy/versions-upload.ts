@@ -297,6 +297,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logpush: undefined, // logpush and observability are non-versioned settings
 		observability: undefined,
 		cache: config.cache, // cache is a versioned setting
+		package_dependencies: props.packageDependencies,
 	};
 
 	if (config.containers && config.containers.length > 0) {

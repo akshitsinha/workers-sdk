@@ -110,6 +110,19 @@ export type SharedDeployVersionsProps = {
 	skipProvisioningConfigWriteback: boolean;
 	/** temporary hack - cf is not yet a recognised deploy source, so any deploys from cf comes back normalised to 'api'*/
 	skipLastDeployedFromApiCheck: boolean;
+	/**
+	 * Pre-collected npm package dependency metadata from the project's package.json.
+	 * Computed in wrangler before calling deploy-helpers and passed through to the upload form.
+	 * `undefined` when the user has opted out via `dependencies_instrumentation: false` or
+	 * when the project has no resolvable dependencies.
+	 */
+	packageDependencies?:
+		| Array<{
+				name: string;
+				packageJsonVersion: string;
+				installedVersion: string;
+		  }>
+		| undefined;
 };
 
 export type DeployProps = SharedDeployVersionsProps & {
