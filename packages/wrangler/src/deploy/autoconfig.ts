@@ -19,6 +19,7 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { isAgenticAgent } from "../utils/detect-agent";
 import type { ReadConfigCommandArgs } from "../config";
 
 /**
@@ -130,7 +131,9 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				}
 			} else if (!details.configured) {
 				// Only run auto config if the project is not already configured
-				const autoConfigSummary = await runAutoConfig(details);
+				const autoConfigSummary = await runAutoConfig(details, {
+					skipConfirmations: isAgenticAgent(),
+				});
 
 				writeOutput({
 					type: "autoconfig",
