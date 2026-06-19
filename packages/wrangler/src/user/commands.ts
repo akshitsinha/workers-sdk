@@ -159,12 +159,28 @@ export const loginCommand = createCommand({
 				//
 				// `getCredentialStore()` re-reads the persisted preference, so
 				// we have to persist *before* validating. Roll the persist
-				// back if validation throws so a failed opt-in doesn't leave
-				// `keyring_enabled: true` on disk — otherwise every subsequent
-				// invocation would soft-fall-back to the file store with a
-				// confusing warning until the user ran `--no-use-keyring`.
+				// back in *two* cases so a failed opt-in doesn't leave
+				// `keyring_enabled: true` on disk:
+				//
+				//  1. The resolver threw (e.g. CLOUDFLARE_AUTH_USE_KEYRING=true
+				//     forced + unsupported platform, Windows install failure
+				//     when forced, non-interactive Linux without secret-tool).
+				//  2. The resolver soft-fell-back to the plaintext file store
+				//     (interactive Linux without secret-tool, unsupported
+				//     platform without env-var force, Windows install failure
+				//     not forced). The resolver already warned the user; we
+				//     just need to make sure we don't persist the opt-in on
+				//     top of that warning, because every future command would
+				//     then re-resolve, soft-fall-back again, and warn again
+				//     until the user explicitly ran `--no-use-keyring`.
 				try {
-					getCredentialStore();
+					const store = getCredentialStore();
+					if (store.kind !== "encrypted-file") {
+						updateUserPreferences({ keyring_enabled: previouslyEnabled });
+						logger.warn(
+							"Keyring storage isn't available on this host (see warning above), so `--use-keyring` was not persisted. Re-run `wrangler login --use-keyring` once the keyring backend is reachable."
+						);
+					}
 				} catch (e) {
 					updateUserPreferences({ keyring_enabled: previouslyEnabled });
 					throw e;

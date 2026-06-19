@@ -363,15 +363,17 @@ export type { UserAuthConfig } from "@cloudflare/workers-auth";
 
 /**
  * Read stored OAuth credentials via the active credential store (plaintext
- * TOML by default; encrypted file when `--use-keyring` is in effect). Throws
- * when no credentials are stored — callers wrap in try/catch and treat the
- * throw as "not logged in via local OAuth".
+ * TOML by default; encrypted file when `--use-keyring` is in effect).
+ * Returns `undefined` when no credentials are stored — callers treat the
+ * `undefined` as "not logged in via local OAuth". Genuine errors (e.g.
+ * filesystem permission failures, corrupted plaintext TOML) still throw —
+ * see the `ConfigStorage<T>` contract in `@cloudflare/workers-auth`.
  *
  * Renamed from `readAuthConfigFile` (the "File" suffix no longer reflects
  * the implementation — when keyring storage is active there is no plaintext
  * file on disk).
  */
-export function readAuthCredentials(): UserAuthConfig {
+export function readAuthCredentials(): UserAuthConfig | undefined {
 	return credentialStorage.storage.read();
 }
 

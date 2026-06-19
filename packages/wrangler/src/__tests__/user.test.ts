@@ -750,6 +750,68 @@ describe("User", () => {
 			// invocations must not see the opt-in as live.
 			expect(readUserPreferences().keyring_enabled).not.toBe(true);
 		});
+
+		it("--use-keyring rolls the keyring_enabled preference back when the resolver soft-falls-back to the file store", async ({
+			expect,
+		}) => {
+			// Regression for the *soft-fallback* arm of the eager
+			// validation: when the resolver returns `FileCredentialStore`
+			// without throwing (e.g. interactive Linux without
+			// `secret-tool`, unsupported platform without env-var force,
+			// Windows install failure not forced), the try/catch around
+			// `getCredentialStore()` doesn't fire. Without an explicit
+			// `.kind` check the preference stays persisted as
+			// `keyring_enabled: true`, so every future command re-resolves,
+			// soft-falls-back again, and re-emits the one-time warning
+			// latch until the user runs `--no-use-keyring`. The opt-in
+			// path must detect "got a file store back" and roll back too.
+			const { readUserPreferences } = await import("../user/preferences");
+
+			// Force the resolver onto the `unsupported` arm by stubbing
+			// the platform. Unsupported-without-force returns a
+			// `FileCredentialStore` with a one-time warning; no throw.
+			// `setKeyProviderFactoryForTesting(undefined)` (the default
+			// after `afterEach`) ensures the real resolver runs.
+			const ORIGINAL_PLATFORM = process.platform;
+			Object.defineProperty(process, "platform", {
+				value: "freebsd",
+				configurable: true,
+			});
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			expect(readUserPreferences().keyring_enabled).toBeUndefined();
+
+			try {
+				await runWrangler("login --use-keyring");
+			} finally {
+				Object.defineProperty(process, "platform", {
+					value: ORIGINAL_PLATFORM,
+					configurable: true,
+				});
+			}
+
+			// The soft-fallback must not leave `keyring_enabled: true` on
+			// disk — otherwise every subsequent command re-warns.
+			expect(readUserPreferences().keyring_enabled).not.toBe(true);
+			// And the user must have been told why the opt-in did not
+			// stick, so they're not surprised when subsequent commands
+			// don't behave as if keyring is enabled.
+			expect(std.warn).toContain("`--use-keyring` was not persisted");
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async ({

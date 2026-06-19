@@ -52,11 +52,19 @@ export function getAuthConfigFilePath(): string {
 export class FileCredentialStore implements CredentialStore {
 	readonly kind = "file" as const;
 
-	read(): UserAuthConfig {
-		// Matches the `AuthConfigStorage` contract: throw when nothing is
-		// stored. `readStoredAuthState` and equivalents wrap this in
-		// try/catch and treat throws as "not logged in".
-		return parseTOML(readFileSync(getAuthConfigFilePath())) as UserAuthConfig;
+	read(): UserAuthConfig | undefined {
+		const filePath = getAuthConfigFilePath();
+		// "Not logged in" is `undefined`, not a thrown exception — see the
+		// `ConfigStorage<T>` interface docs. A missing file is by far the
+		// most common shape of "no credentials stored yet" and we must not
+		// raise on it.
+		if (!existsSync(filePath)) {
+			return undefined;
+		}
+		// File exists but is unparseable — `parseTOML`'s throw propagates
+		// so the user sees the corruption rather than silently being
+		// treated as logged out.
+		return parseTOML(readFileSync(filePath)) as UserAuthConfig;
 	}
 
 	write(config: UserAuthConfig): void {

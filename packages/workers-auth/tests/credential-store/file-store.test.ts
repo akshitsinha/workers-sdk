@@ -34,16 +34,20 @@ describe("FileCredentialStore", () => {
 		expect(raw).toContain('oauth_token = "test-oauth-token"');
 	});
 
-	it("read throws when no file exists", ({ expect }) => {
-		expect(() => new FileCredentialStore().read()).toThrow();
+	it("read returns undefined when no file exists", ({ expect }) => {
+		// Per the `ConfigStorage<T>.read()` contract, "nothing stored
+		// yet" is the empty state and surfaces as `undefined` — not a
+		// thrown exception.
+		expect(new FileCredentialStore().read()).toBeUndefined();
 	});
 
 	it("read throws when the file is corrupted", ({ expect }) => {
 		const store = new FileCredentialStore();
 		store.write(SAMPLE_CONFIG);
-		// Overwrite with garbage and check that read() throws — callers
-		// (`readStoredAuthState`) wrap in try/catch and treat the throw as
-		// "no credentials".
+		// A file that exists but is unparseable is a genuine error
+		// (the user benefits from seeing the corruption rather than
+		// silently being treated as "not logged in"), so `read()`
+		// throws — distinct from the missing-file path above.
 		writeFileSync(getAuthConfigFilePath(), "this is not toml = = =");
 		expect(() => store.read()).toThrow();
 	});

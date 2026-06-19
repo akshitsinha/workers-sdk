@@ -103,22 +103,27 @@ describe("EncryptedFileCredentialStore", () => {
 		expect(keyProvider.getKey()).toEqual(firstKey);
 	});
 
-	it("read throws when neither file nor key exist", ({ expect }) => {
+	// Per the `ConfigStorage<T>.read()` contract, all of the
+	// "no usable data stored" shapes collapse to `undefined` — including
+	// missing file, missing key, tampered ciphertext, and corrupted
+	// envelope. The consumer treats `undefined` as "not logged in" and
+	// the next login regenerates the key and re-encrypts cleanly.
+	it("read returns undefined when neither file nor key exist", ({ expect }) => {
 		const store = new EncryptedFileCredentialStore(new InMemoryKeyProvider());
-		expect(() => store.read()).toThrow();
+		expect(store.read()).toBeUndefined();
 	});
 
-	it("read throws when the file exists but the key is missing", ({
+	it("read returns undefined when the file exists but the key is missing", ({
 		expect,
 	}) => {
 		const keyProvider = new InMemoryKeyProvider();
 		const store = new EncryptedFileCredentialStore(keyProvider);
 		store.write(SAMPLE_CONFIG);
 		keyProvider.deleteKey();
-		expect(() => store.read()).toThrow();
+		expect(store.read()).toBeUndefined();
 	});
 
-	it("read throws when the file is tampered with", ({ expect }) => {
+	it("read returns undefined when the file is tampered with", ({ expect }) => {
 		const keyProvider = new InMemoryKeyProvider();
 		const store = new EncryptedFileCredentialStore(keyProvider);
 		store.write(SAMPLE_CONFIG);
@@ -131,15 +136,17 @@ describe("EncryptedFileCredentialStore", () => {
 		envelope.ciphertext = cipherBytes.toString("base64");
 		writeFileSync(filePath, JSON.stringify(envelope));
 
-		expect(() => store.read()).toThrow();
+		expect(store.read()).toBeUndefined();
 	});
 
-	it("read throws for a corrupted envelope (invalid JSON)", ({ expect }) => {
+	it("read returns undefined for a corrupted envelope (invalid JSON)", ({
+		expect,
+	}) => {
 		const keyProvider = new InMemoryKeyProvider();
 		const store = new EncryptedFileCredentialStore(keyProvider);
 		store.write(SAMPLE_CONFIG);
 		writeFileSync(getEncryptedAuthConfigFilePath(), "not json");
-		expect(() => store.read()).toThrow();
+		expect(store.read()).toBeUndefined();
 	});
 
 	it("clear removes both the encrypted file and the keyring entry", ({
@@ -251,14 +258,20 @@ describe("EncryptedFileCredentialStore", () => {
 			expect(existsSync(legacyPath)).toBe(false);
 		});
 
-		it("read throws when the legacy file is unparseable", ({ expect }) => {
+		it("read returns undefined when the legacy file is unparseable", ({
+			expect,
+		}) => {
 			const legacyPath = getAuthConfigFilePath();
 			mkdirSync(path.dirname(legacyPath), { recursive: true });
 			writeFileSync(legacyPath, "garbage = = =");
 			const store = new EncryptedFileCredentialStore(new InMemoryKeyProvider());
-			expect(() => store.read()).toThrow();
-			// The unparseable legacy file is left in place so the user can
-			// inspect it; we don't silently delete data we couldn't read.
+			// Consistent with the other corruption-shaped paths on the
+			// encrypted store: an unparseable legacy file collapses to
+			// "no usable data" (the next login regenerates the key and
+			// re-encrypts cleanly). The unparseable file is left on
+			// disk so the user can inspect it — we don't silently
+			// delete data we couldn't read.
+			expect(store.read()).toBeUndefined();
 			expect(existsSync(legacyPath)).toBe(true);
 		});
 	});

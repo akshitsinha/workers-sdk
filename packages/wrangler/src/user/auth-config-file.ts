@@ -27,7 +27,17 @@ export function createTomlFileStorage<T extends object>(
 	getPath: () => string
 ): ConfigStorage<T> {
 	return {
-		read: () => parseTOML(readFileSync(getPath())) as T,
+		read: () => {
+			const filePath = getPath();
+			// Matches the `ConfigStorage<T>.read()` contract: return
+			// `undefined` for the empty state (no file on disk) rather
+			// than throwing. Parse errors on a file that *does* exist
+			// still propagate so callers can surface corruption.
+			if (!existsSync(filePath)) {
+				return undefined;
+			}
+			return parseTOML(readFileSync(filePath)) as T;
+		},
 		write(config) {
 			const configPath = getPath();
 			mkdirSync(path.dirname(configPath), { recursive: true });

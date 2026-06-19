@@ -59,19 +59,6 @@ export interface LegacyMigrationResult {
 export type OnLegacyMigration = (result: LegacyMigrationResult) => void;
 
 /**
- * Sentinel error thrown by {@link EncryptedFileCredentialStore.read} when
- * no credentials are stored. Matches the `AuthConfigStorage` "throw on
- * missing" contract; `readStoredAuthState` and equivalents wrap reads
- * in try/catch and treat throws as "not logged in".
- */
-class NoCredentialsStoredError extends Error {
-	constructor() {
-		super("No credentials stored");
-		this.name = "NoCredentialsStoredError";
-	}
-}
-
-/**
  * Credentials store backed by an AES-256-GCM-encrypted file on disk and a
  * 32-byte encryption key held in the OS keyring via a {@link KeyProvider}.
  *
@@ -98,14 +85,17 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		private readonly onLegacyMigration?: OnLegacyMigration
 	) {}
 
-	read(): UserAuthConfig {
+	read(): UserAuthConfig | undefined {
+		// `read()` returns `undefined` for every "no usable data" shape —
+		// see the `ConfigStorage<T>` interface docs. That collapses
+		// "no encrypted file", "encrypted file but key missing",
+		// "ciphertext tampered/corrupted", and "decrypted plaintext is
+		// not valid TOML" into one consumer-visible state ("not logged
+		// in"). Genuine errors (filesystem permission failures, etc.)
+		// still propagate via `readEncryptedFile` / the legacy parser.
 		const encryptedPath = getEncryptedAuthConfigFilePath();
 		if (existsSync(encryptedPath)) {
-			const value = this.readEncryptedFile(encryptedPath);
-			if (value === undefined) {
-				throw new NoCredentialsStoredError();
-			}
-			return value;
+			return this.readEncryptedFile(encryptedPath);
 		}
 		// No encrypted file yet — see if there's a legacy plaintext file we
 		// should migrate into the encrypted layout. This makes opt-in
@@ -113,13 +103,9 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		// `wrangler login --use-keyring` returns the migrated credentials.
 		const legacyPath = getAuthConfigFilePath();
 		if (existsSync(legacyPath)) {
-			const migrated = this.migrateFromLegacy(legacyPath, encryptedPath);
-			if (migrated === undefined) {
-				throw new NoCredentialsStoredError();
-			}
-			return migrated;
+			return this.migrateFromLegacy(legacyPath, encryptedPath);
 		}
-		throw new NoCredentialsStoredError();
+		return undefined;
 	}
 
 	write(config: UserAuthConfig): void {
