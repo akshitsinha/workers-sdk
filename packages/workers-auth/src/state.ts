@@ -75,12 +75,7 @@ export function readStoredAuthState(options: {
 }): StoredAuthState {
 	const { configOverride, warningLogger, storage } = options;
 
-	let parsed: UserAuthConfig;
-	try {
-		parsed = configOverride ?? storage.read();
-	} catch {
-		return {};
-	}
+	const parsed = configOverride ?? storage.read();
 
 	const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
 		parsed;
