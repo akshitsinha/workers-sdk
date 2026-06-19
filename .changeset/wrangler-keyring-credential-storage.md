@@ -23,8 +23,4 @@ Wrangler ships with **zero native credential dependencies**. Each platform uses 
 - The on-disk format is a JSON envelope `{ v, alg: "AES-256-GCM", iv, tag, ciphertext }`. The auth tag prevents tampering — any corruption or wrong key is detected and treated as "not logged in".
 - The keyring entry stores only a 32-byte symmetric key (wrapped in a small JSON envelope for forward-compat), well below the macOS Keychain ~2.5 KB per-item limit, so the encrypted credential blob is free to grow as the schema evolves.
 
-#### Internal architecture
-
-The credential persistence layer has moved into `@cloudflare/workers-auth`. `createOAuthFlow(ctx)` now requires a `credentialStorage` block (`serviceName`, `isKeyringEnabled` callback, optional `cliName`) and returns a new `getCredentialStore()` accessor for `whoami`-style code. Future Cloudflare CLIs that reuse `workers-auth` get the same OS keyring–encrypted credential storage by providing their own `serviceName`.
-
 `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_API_KEY`/`CLOUDFLARE_EMAIL` continue to take priority over any stored OAuth credentials.

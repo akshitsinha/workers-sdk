@@ -113,7 +113,11 @@ export class LinuxSecretToolKeyProvider implements KeyProvider {
 				`Failed to read key via secret-tool (exit ${r.status}): ${r.stderr?.trim() ?? "(no stderr)"}`
 			);
 		}
-		return decodeKeyEnvelope(r.stdout);
+		// `.trim()` matches `MacSecurityKeyProvider.getKey()`: `secret-tool
+		// lookup` ends its output with a newline, which `JSON.parse` happens
+		// to accept, but trimming first is defensive (and keeps the two
+		// providers behaviourally identical).
+		return decodeKeyEnvelope(r.stdout.trim());
 	}
 
 	setKey(key: Uint8Array): void {

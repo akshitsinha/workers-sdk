@@ -362,19 +362,25 @@ export { getAuthConfigFilePath } from "@cloudflare/workers-auth";
 export type { UserAuthConfig } from "@cloudflare/workers-auth";
 
 /**
- * Read the user auth config via the active credential store (plaintext TOML
- * by default; encrypted file when `--use-keyring` is in effect). Throws when
- * no credentials are stored — callers wrap in try/catch and treat the throw
- * as "not logged in via local OAuth".
+ * Read stored OAuth credentials via the active credential store (plaintext
+ * TOML by default; encrypted file when `--use-keyring` is in effect). Throws
+ * when no credentials are stored — callers wrap in try/catch and treat the
+ * throw as "not logged in via local OAuth".
+ *
+ * Renamed from `readAuthConfigFile` (the "File" suffix no longer reflects
+ * the implementation — when keyring storage is active there is no plaintext
+ * file on disk).
  */
-export function readAuthConfigFile(): UserAuthConfig {
+export function readAuthCredentials(): UserAuthConfig {
 	return credentialStorage.storage.read();
 }
 
 /**
- * Persist the user auth config via the active credential store.
+ * Persist OAuth credentials via the active credential store.
+ *
+ * Renamed from `writeAuthConfigFile` (see {@link readAuthCredentials}).
  */
-export function writeAuthConfigFile(config: UserAuthConfig): void {
+export function writeAuthCredentials(config: UserAuthConfig): void {
 	credentialStorage.storage.write(config);
 }
 // `PKCE_CHARSET` is re-exported for any external consumers that used to

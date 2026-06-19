@@ -3,8 +3,8 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
 	getAuthConfigFilePath,
-	readAuthConfigFile,
-	writeAuthConfigFile,
+	readAuthCredentials,
+	writeAuthCredentials,
 } from "../user";
 import type { UserAuthConfig } from "../user";
 
@@ -15,12 +15,12 @@ const SAMPLE_CONFIG: UserAuthConfig = {
 	scopes: ["account:read"],
 };
 
-describe("writeAuthConfigFile", () => {
+describe("writeAuthCredentials", () => {
 	runInTempDir();
 
 	it("round-trips a UserAuthConfig through the TOML file", ({ expect }) => {
-		writeAuthConfigFile(SAMPLE_CONFIG);
-		expect(readAuthConfigFile()).toEqual(SAMPLE_CONFIG);
+		writeAuthCredentials(SAMPLE_CONFIG);
+		expect(readAuthCredentials()).toEqual(SAMPLE_CONFIG);
 	});
 
 	// POSIX-only: Windows doesn't honour POSIX mode bits — `chmodSync` only
@@ -30,7 +30,7 @@ describe("writeAuthConfigFile", () => {
 	it.skipIf(process.platform === "win32")(
 		"writes a new auth config file with mode 0o600",
 		({ expect }) => {
-			writeAuthConfigFile(SAMPLE_CONFIG);
+			writeAuthCredentials(SAMPLE_CONFIG);
 			const mode = statSync(getAuthConfigFilePath()).mode & 0o777;
 			expect(mode).toBe(0o600);
 		}
@@ -41,13 +41,13 @@ describe("writeAuthConfigFile", () => {
 		({ expect }) => {
 			// Simulate a file left behind by an older Wrangler version that
 			// wrote with the process umask (typically 0o644).
-			writeAuthConfigFile(SAMPLE_CONFIG);
+			writeAuthCredentials(SAMPLE_CONFIG);
 			chmodSync(getAuthConfigFilePath(), 0o644);
 			expect(statSync(getAuthConfigFilePath()).mode & 0o777).toBe(0o644);
 
 			// Re-saving must restore the tight 0o600 permissions even though
 			// `writeFileSync`'s `mode` option is ignored for existing files.
-			writeAuthConfigFile(SAMPLE_CONFIG);
+			writeAuthCredentials(SAMPLE_CONFIG);
 			expect(statSync(getAuthConfigFilePath()).mode & 0o777).toBe(0o600);
 		}
 	);

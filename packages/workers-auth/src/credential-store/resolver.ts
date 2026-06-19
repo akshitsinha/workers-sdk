@@ -7,6 +7,7 @@ import { PINNED_KEYRING_VERSION } from "./key-providers/lazy-installer";
 import { getResolverSessionFlags } from "./state";
 import type { AuthConfigStorage } from "../config-file/auth";
 import type { OAuthFlowLogger } from "../context";
+import type { LegacyMigrationResult } from "./encrypted-file-store";
 import type { CredentialStore } from "./interface";
 
 /**
@@ -127,11 +128,10 @@ function resolveActiveCredentialStore(config: ResolvedConfig): CredentialStore {
 
 	switch (resolution.kind) {
 		case "available":
-			return new EncryptedFileCredentialStore(resolution.provider, (result) => {
-				config.logger.log(
-					`Migrated credentials from ${result.legacyPath} into ${result.encryptedPath} (key in ${result.keyProviderDescription}).`
-				);
-			});
+			return new EncryptedFileCredentialStore(
+				resolution.provider,
+				buildMigrationLogger(config)
+			);
 
 		case "needs-install":
 			return handleNeedsInstall(resolution, forced, config);
@@ -139,6 +139,24 @@ function resolveActiveCredentialStore(config: ResolvedConfig): CredentialStore {
 		case "unsupported":
 			return handleUnsupported(forced, config);
 	}
+}
+
+/**
+ * Build the legacy-migration callback wired into a new
+ * {@link EncryptedFileCredentialStore}. Surfaces the plaintext→encrypted
+ * migration at `warn` level (rather than `log`) because the migration
+ * deletes the legacy plaintext credentials file on disk, which is a
+ * stateful change the user benefits from seeing distinctly in their
+ * terminal output.
+ */
+function buildMigrationLogger(
+	config: ResolvedConfig
+): (result: LegacyMigrationResult) => void {
+	return (result) => {
+		config.logger.warn(
+			`Migrated credentials from ${result.legacyPath} into ${result.encryptedPath} (key in ${result.keyProviderDescription}). The plaintext file has been deleted.`
+		);
+	};
 }
 
 function handleNeedsInstall(
@@ -191,11 +209,7 @@ function handleNeedsInstall(
 
 	return new EncryptedFileCredentialStore(
 		resolution.afterInstall(),
-		(result) => {
-			config.logger.log(
-				`Migrated credentials from ${result.legacyPath} into ${result.encryptedPath} (key in ${result.keyProviderDescription}).`
-			);
-		}
+		buildMigrationLogger(config)
 	);
 }
 
