@@ -96,6 +96,24 @@ describe("lazy keyring installer", () => {
 			setNpmRunner(() => mockResult({ status: 1 }));
 			expect(findKeyringBinding()).toBeNull();
 		});
+
+		it("memoizes the result so repeated calls do not re-spawn npm", ({
+			expect,
+		}) => {
+			// Without memoization the resolver's per-credential-op resolution
+			// would spawn `npm root -g` on every read/write. We probe at most
+			// once per process for the missing-binding case.
+			let spawnCount = 0;
+			setNpmRunner((args) => {
+				spawnCount += 1;
+				lastInvocation = args;
+				return mockResult({ stdout: "/nonexistent/global/root\n" });
+			});
+			expect(findKeyringBinding()).toBeNull();
+			expect(findKeyringBinding()).toBeNull();
+			expect(findKeyringBinding()).toBeNull();
+			expect(spawnCount).toBe(1);
+		});
 	});
 
 	describe("installKeyringBindingSync", () => {
@@ -151,6 +169,47 @@ describe("lazy keyring installer", () => {
 			setNpmRunner(() => mockResult({}));
 			installKeyringBindingSync();
 			expect(readFileSync(hostPkgJson, "utf-8")).toContain("customMarker");
+		});
+
+		it("invalidates the findKeyringBinding cache so a fresh install is picked up", ({
+			expect,
+		}) => {
+			// Regression: `findKeyringBinding()` memoizes its result. The
+			// install path must clear the cached "not found" entry so the
+			// next resolution sees the freshly-installed binding instead of
+			// reporting it as missing forever.
+			const bindingDir = path.join(
+				getKeyringInstallDir(),
+				"node_modules",
+				"@napi-rs",
+				"keyring"
+			);
+			let installCalled = false;
+			setNpmRunner((args) => {
+				if (args[0] === "root") {
+					return mockResult({ stdout: "/nonexistent/global/root\n" });
+				}
+				// `install` arm: write the binding files in place so the
+				// next `findKeyringBinding()` call discovers them.
+				installCalled = true;
+				mkdirSync(bindingDir, { recursive: true });
+				writeFileSync(
+					path.join(bindingDir, "index.js"),
+					"module.exports = {};"
+				);
+				return mockResult({});
+			});
+
+			// First lookup populates the cache with `null`.
+			expect(findKeyringBinding()).toBeNull();
+
+			// Install lands the binding on disk and invalidates the cache.
+			installKeyringBindingSync();
+			expect(installCalled).toBe(true);
+
+			// Next lookup must re-check the filesystem and return the new
+			// binding path (not the cached `null`).
+			expect(findKeyringBinding()).toBe(bindingDir);
 		});
 	});
 });

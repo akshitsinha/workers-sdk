@@ -156,7 +156,19 @@ export const loginCommand = createCommand({
 				// install (Windows lazy-install of @napi-rs/keyring) or probe
 				// failure (Linux missing secret-tool, CI without TTY) surfaces
 				// before the user sits through the OAuth flow.
-				getCredentialStore();
+				//
+				// `getCredentialStore()` re-reads the persisted preference, so
+				// we have to persist *before* validating. Roll the persist
+				// back if validation throws so a failed opt-in doesn't leave
+				// `keyring_enabled: true` on disk — otherwise every subsequent
+				// invocation would soft-fall-back to the file store with a
+				// confusing warning until the user ran `--no-use-keyring`.
+				try {
+					getCredentialStore();
+				} catch (e) {
+					updateUserPreferences({ keyring_enabled: previouslyEnabled });
+					throw e;
+				}
 			}
 		}
 

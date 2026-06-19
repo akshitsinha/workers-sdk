@@ -6,12 +6,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import {
-	getCloudflareApiEnvironmentFromEnv,
-	getGlobalWranglerConfigPath,
-	parseTOML,
-	readFileSync,
-} from "@cloudflare/workers-utils";
+import { parseTOML, readFileSync } from "@cloudflare/workers-utils";
 import TOML from "smol-toml";
 import type { ConfigStorage } from "@cloudflare/workers-auth";
 
@@ -52,26 +47,8 @@ export function createTomlFileStorage<T extends object>(
 	};
 }
 
-/**
- * The path to the config file that holds user authentication data,
- * relative to the user's home directory.
- */
-const USER_AUTH_CONFIG_PATH = "config";
-
-/**
- * Returns the absolute path to the auth config TOML file.
- *
- * The file lives under the global Wrangler config directory and is named
- * `default.toml` in production, or `<environment>.toml` for the staging /
- * other Cloudflare API environments.
- *
- * Kept in sync with the `getAuthConfigFilePath` implementation in
- * `@cloudflare/workers-auth/src/credential-store/file-store.ts` so the
- * encrypted-file legacy-migration code finds the same file that wrangler
- * tests and `whoami` assert against.
- */
-export function getAuthConfigFilePath(): string {
-	const environment = getCloudflareApiEnvironmentFromEnv();
-	const filePath = `${USER_AUTH_CONFIG_PATH}/${environment === "production" ? "default.toml" : `${environment}.toml`}`;
-	return path.join(getGlobalWranglerConfigPath(), filePath);
-}
+// `getAuthConfigFilePath` is owned by `@cloudflare/workers-auth` (it's the
+// authority for the plaintext-TOML store's path layout, which the encrypted-
+// file store also needs for legacy migration). Wrangler re-exports it from
+// `./user` for back-compat with the historical wrangler-side import path.
+export { getAuthConfigFilePath } from "@cloudflare/workers-auth";

@@ -358,7 +358,7 @@ export async function getOAuthTokenFromLocalState(): Promise<
 	return oauthFlow.getOAuthTokenFromLocalState();
 }
 
-export { getAuthConfigFilePath } from "./auth-config-file";
+export { getAuthConfigFilePath } from "@cloudflare/workers-auth";
 export type { UserAuthConfig } from "@cloudflare/workers-auth";
 
 /**

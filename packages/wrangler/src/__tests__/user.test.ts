@@ -3,6 +3,7 @@ import path from "node:path";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalWranglerConfigPath,
+	UserError,
 } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -714,6 +715,49 @@ describe("User", () => {
 			expect(fs.readFileSync(getAuthConfigFilePath(), "utf8")).not.toContain(
 				"stale-encrypted-token"
 			);
+
+			setKeyProviderFactoryForTesting(undefined);
+			resetCredentialStorageState();
+		});
+
+		it("--use-keyring rolls the keyring_enabled preference back when eager credential-store validation throws", async ({
+			expect,
+		}) => {
+			// Regression: persisting `keyring_enabled: true` *before* the
+			// eager validation call leaves a stale `true` on disk when the
+			// validation throws. Subsequent invocations would then soft-
+			// fall-back to the file store with a one-time warning on every
+			// command until the user explicitly ran `--no-use-keyring`.
+			// The opt-in path must roll back the persisted preference when
+			// the eager validation surfaces a failure.
+			const { setKeyProviderFactoryForTesting, resetCredentialStorageState } =
+				await import("@cloudflare/workers-auth");
+			const { readUserPreferences } = await import("../user/preferences");
+
+			// Force the eager validation to throw by giving the test seam
+			// a factory that itself throws when `resolveKeyProvider` calls
+			// it. The throw propagates through `getActiveStore()` and out
+			// of `getCredentialStore()`, which is exactly the platform-
+			// install / non-interactive-CI failure shape we care about.
+			setKeyProviderFactoryForTesting(() => {
+				throw new UserError("Simulated eager-validation failure", {
+					telemetryMessage: "test eager validation failure",
+				});
+			});
+			resetCredentialStorageState();
+
+			// Starting state: no preference persisted yet.
+			expect(readUserPreferences().keyring_enabled).toBeUndefined();
+
+			await expect(runWrangler("login --use-keyring")).rejects.toThrow(
+				"Simulated eager-validation failure"
+			);
+
+			// The preference must not be left at `true` on disk — either
+			// rolled back to `false` (its previous boolean value) or
+			// unset. Anything but `true` is acceptable; subsequent
+			// invocations must not see the opt-in as live.
+			expect(readUserPreferences().keyring_enabled).not.toBe(true);
 
 			setKeyProviderFactoryForTesting(undefined);
 			resetCredentialStorageState();

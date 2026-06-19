@@ -26,13 +26,28 @@ function defaultRunner(
 let runner: LinuxSecretToolRunner = defaultRunner;
 
 /**
+ * Cached `probeSecretTool` result. The resolver re-runs the resolution
+ * on every credential read/write so the probe would otherwise spawn
+ * `secret-tool --version` on every operation. Memoizing per-process
+ * keeps the probe out of the hot path. `undefined` means "not yet
+ * probed".
+ *
+ * Reset by {@link setLinuxSecretToolRunner} so tests that swap the
+ * runner mid-suite re-probe with the new fake.
+ */
+let cachedProbeResult: boolean | undefined = undefined;
+
+/**
  * Override the `secret-tool` invoker for tests. Pass `undefined` to restore
- * the default real-process runner.
+ * the default real-process runner. Resets the memoized
+ * {@link probeSecretTool} result so the next call re-probes through the
+ * new runner.
  */
 export function setLinuxSecretToolRunner(
 	fn: LinuxSecretToolRunner | undefined
 ): void {
 	runner = fn ?? defaultRunner;
+	cachedProbeResult = undefined;
 }
 
 /**
@@ -43,14 +58,26 @@ export function setLinuxSecretToolRunner(
  * on the first real read/write rather than every consumer invocation, so
  * we avoid the extra latency on every command for users whose desktop
  * session is fully working.
+ *
+ * The result is memoized per-process: `secret-tool` is not going to be
+ * uninstalled mid-command, and the resolver re-resolves the active store
+ * on every credential operation (see `resolver.ts`), so caching keeps the
+ * probe off the hot path. Tests reset the cache via
+ * {@link setLinuxSecretToolRunner}.
  */
 export function probeSecretTool(): boolean {
+	if (cachedProbeResult !== undefined) {
+		return cachedProbeResult;
+	}
+	let result: boolean;
 	try {
 		const r = runner(["--version"]);
-		return r.status === 0;
+		result = r.status === 0;
 	} catch {
-		return false;
+		result = false;
 	}
+	cachedProbeResult = result;
+	return result;
 }
 
 /**

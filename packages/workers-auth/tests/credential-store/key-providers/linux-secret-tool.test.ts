@@ -65,6 +65,35 @@ describe("LinuxSecretToolKeyProvider", () => {
 			setLinuxSecretToolRunner(() => mockResult({ status: 127 }));
 			expect(probeSecretTool()).toBe(false);
 		});
+
+		it("memoizes the result so repeated calls do not re-spawn secret-tool", ({
+			expect,
+		}) => {
+			// Without memoization the resolver's per-credential-op resolution
+			// would spawn `secret-tool --version` on every read/write. We
+			// probe at most once per process.
+			let spawnCount = 0;
+			setLinuxSecretToolRunner(() => {
+				spawnCount += 1;
+				return mockResult({ stdout: "secret-tool 0.21.7" });
+			});
+			expect(probeSecretTool()).toBe(true);
+			expect(probeSecretTool()).toBe(true);
+			expect(probeSecretTool()).toBe(true);
+			expect(spawnCount).toBe(1);
+		});
+
+		it("setLinuxSecretToolRunner invalidates the memoized probe result", ({
+			expect,
+		}) => {
+			// Test seam: swapping the runner mid-suite must re-probe so the
+			// new fake's verdict is observable on the next call.
+			setLinuxSecretToolRunner(() => mockResult({ status: 0 }));
+			expect(probeSecretTool()).toBe(true);
+
+			setLinuxSecretToolRunner(() => mockResult({ status: 127 }));
+			expect(probeSecretTool()).toBe(false);
+		});
 	});
 
 	it("getKey invokes lookup with the configured serviceName", ({ expect }) => {

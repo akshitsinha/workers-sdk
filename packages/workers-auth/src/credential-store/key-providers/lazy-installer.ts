@@ -23,20 +23,42 @@ export const PINNED_KEYRING_VERSION = "1.3.0";
 export type NpmRunner = (args: string[]) => SpawnSyncReturns<string>;
 
 function defaultNpmRunner(args: string[]): SpawnSyncReturns<string> {
+	// `shell: true` on Windows so `spawnSync` resolves the `npm.cmd` /
+	// `npm.ps1` shim that ships with Node for Windows. Without it, some
+	// Windows configurations (older Node, atypical install layouts) fail
+	// to locate `npm` and report ENOENT. On POSIX `shell: false` keeps the
+	// argv shape simple and avoids quoting concerns.
 	return spawnSync("npm", args, {
 		encoding: "utf-8",
 		stdio: ["ignore", "pipe", "pipe"],
+		shell: process.platform === "win32",
 	});
 }
 
 let npmRunner: NpmRunner = defaultNpmRunner;
 
 /**
+ * Cached {@link findKeyringBinding} result. The resolver re-runs the
+ * resolution on every credential read/write, so without memoization
+ * we would spawn `npm root -g` on every operation when the binding
+ * is not present locally. `undefined` means "not yet probed";
+ * `null` is a real "no binding found" cache entry.
+ *
+ * Invalidated by {@link installKeyringBindingSync} (so a fresh install
+ * is picked up immediately) and by {@link setNpmRunner} (so tests can
+ * swap the runner and re-probe).
+ */
+let cachedBindingPath: string | null | undefined = undefined;
+
+/**
  * Override the `npm` invoker for tests. Pass `undefined` to restore the
- * default real-process runner.
+ * default real-process runner. Resets the memoized
+ * {@link findKeyringBinding} cache so the next call re-probes through
+ * the new runner.
  */
 export function setNpmRunner(fn: NpmRunner | undefined): void {
 	npmRunner = fn ?? defaultNpmRunner;
+	cachedBindingPath = undefined;
 }
 
 /**
@@ -76,10 +98,20 @@ function getInstalledBindingPath(): string {
  *
  * Returns `null` when no binding is available; callers handle the missing
  * binding case explicitly so they can surface remediation instructions.
+ *
+ * The result is memoized per-process. The resolver calls this on every
+ * credential operation, so without caching we would spawn `npm root -g`
+ * each time the binding is not in the lazy dir. The cache is invalidated
+ * by {@link installKeyringBindingSync} on a successful install and by
+ * {@link setNpmRunner} for test isolation.
  */
 export function findKeyringBinding(): string | null {
+	if (cachedBindingPath !== undefined) {
+		return cachedBindingPath;
+	}
 	const lazy = getInstalledBindingPath();
 	if (existsSync(path.join(lazy, "index.js"))) {
+		cachedBindingPath = lazy;
 		return lazy;
 	}
 	try {
@@ -87,6 +119,7 @@ export function findKeyringBinding(): string | null {
 		if (r.status === 0) {
 			const global = path.join(r.stdout.trim(), "@napi-rs", "keyring");
 			if (existsSync(path.join(global, "index.js"))) {
+				cachedBindingPath = global;
 				return global;
 			}
 		}
@@ -94,6 +127,7 @@ export function findKeyringBinding(): string | null {
 		// `npm root -g` is best-effort: if `npm` is not on PATH we silently
 		// move on and report "not installed" to the resolver.
 	}
+	cachedBindingPath = null;
 	return null;
 }
 
@@ -154,6 +188,10 @@ export function installKeyringBindingSync(): void {
 			{ telemetryMessage: "workers-auth keyring npm install failed" }
 		);
 	}
+	// Fresh install landed on disk — invalidate the cached "not found"
+	// result so the next `findKeyringBinding()` call picks the new path
+	// up immediately instead of returning the stale `null`.
+	cachedBindingPath = undefined;
 }
 
 /**
