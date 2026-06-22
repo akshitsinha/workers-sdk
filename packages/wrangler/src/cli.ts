@@ -43,6 +43,10 @@ import type {
 	TestHarnessOptions,
 	WorkerHandle,
 	TestHarness,
+	WorkflowInstanceIntrospector,
+	WorkflowInstanceModifier,
+	WorkflowIntrospector,
+	WorkflowStepSelector,
 } from "./api";
 import type { Logger } from "./logger";
 import type { Request, Response } from "miniflare";
@@ -95,6 +99,10 @@ export type {
 	TestHarnessOptions,
 	WorkerHandle,
 	TestHarness,
+	WorkflowInstanceIntrospector,
+	WorkflowInstanceModifier,
+	WorkflowIntrospector,
+	WorkflowStepSelector,
 };
 
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";

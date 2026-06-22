@@ -6,6 +6,10 @@ import {
 	normalizeAndValidateConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	createWorkflowIntrospector,
+	createWorkflowInstanceIntrospector,
+} from "@cloudflare/workflows-shared/src/testing";
 import { Headers, Request } from "miniflare";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { requireApiToken, requireAuth } from "../user";
@@ -20,6 +24,7 @@ import type {
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type { WorkflowBinding } from "@cloudflare/workflows-shared/src/testing";
 import type {
 	DispatchFetch,
 	Json,
@@ -38,6 +43,49 @@ export type TestHarnessOptions = {
 	 * Workers to run in this server. The first worker is the primary worker.
 	 */
 	workers: WorkerInput[];
+};
+
+export type WorkflowStepSelector = {
+	name: string;
+	index?: number;
+};
+
+export type WorkflowInstanceModifier = {
+	disableSleeps(steps?: WorkflowStepSelector[]): Promise<void>;
+	disableRetryDelays(steps?: WorkflowStepSelector[]): Promise<void>;
+	mockStepResult(
+		step: WorkflowStepSelector,
+		stepResult: unknown
+	): Promise<void>;
+	mockStepError(
+		step: WorkflowStepSelector,
+		error: Error,
+		times?: number
+	): Promise<void>;
+	forceStepTimeout(step: WorkflowStepSelector, times?: number): Promise<void>;
+	mockEvent(event: { type: string; payload: unknown }): Promise<void>;
+	forceEventTimeout(step: WorkflowStepSelector): Promise<void>;
+};
+
+export type WorkflowInstanceIntrospector = {
+	modify(
+		fn: (modifier: WorkflowInstanceModifier) => Promise<void>
+	): Promise<WorkflowInstanceIntrospector>;
+	waitForStepResult(step: WorkflowStepSelector): Promise<unknown>;
+	waitForStatus(status: string): Promise<void>;
+	getOutput(): Promise<unknown>;
+	getError(): Promise<{ name: string; message: string }>;
+	dispose(): Promise<void>;
+	[Symbol.asyncDispose](): Promise<void>;
+};
+
+export type WorkflowIntrospector = {
+	modifyAll(
+		fn: (modifier: WorkflowInstanceModifier) => Promise<void>
+	): Promise<void>;
+	get(): Promise<WorkflowInstanceIntrospector[]>;
+	dispose(): Promise<void>;
+	[Symbol.asyncDispose](): Promise<void>;
 };
 
 export type WorkerHandle = {
@@ -66,6 +114,17 @@ export type WorkerHandle = {
 	 * ```
 	 */
 	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
+	/**
+	 * Creates an introspector for a specific Workflow instance.
+	 */
+	introspectWorkflowInstance(
+		bindingName: string,
+		instanceId: string
+	): Promise<WorkflowInstanceIntrospector>;
+	/**
+	 * Creates an introspector for Workflow instances created after this method is called.
+	 */
+	introspectWorkflow(bindingName: string): Promise<WorkflowIntrospector>;
 	/**
 	 * Returns a KV namespace binding configured on this Worker.
 	 *
@@ -691,7 +750,40 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			return dispatchFetch(miniflare, input, init);
 		},
 		getWorker(name?: string) {
+			async function getWorkflowBinding(bindingName: string) {
+				const session = await resolveSession();
+				const miniflare = await getRuntimeMiniflare(session);
+				const workerName = resolveWorkerName(session, name);
+				const devEnv = session.devEnvs.find(
+					(d) => d.config.latestConfig?.name === workerName
+				);
+				const bindingConfig =
+					devEnv?.config.latestConfig?.bindings?.[bindingName];
+
+				if (bindingConfig?.type !== "workflow") {
+					throw new TypeError(
+						`No Workflow binding named ${JSON.stringify(bindingName)} found in ${JSON.stringify(workerName)} worker.`
+					);
+				}
+
+				const bindings =
+					await miniflare.getBindings<Record<string, unknown>>(workerName);
+				const workflow = bindings[bindingName];
+
+				return { workflow: workflow as WorkflowBinding };
+			}
+
 			return {
+				async introspectWorkflow(bindingName) {
+					const { workflow } = await getWorkflowBinding(bindingName);
+
+					return createWorkflowIntrospector(workflow);
+				},
+				async introspectWorkflowInstance(bindingName, instanceId) {
+					const { workflow } = await getWorkflowBinding(bindingName);
+
+					return createWorkflowInstanceIntrospector(workflow, instanceId);
+				},
 				async fetch(input, init) {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);

@@ -2,6 +2,7 @@ import type {
 	WorkflowBinding,
 	WorkflowInstanceRestartOptions,
 } from "@cloudflare/workflows-shared/src/binding";
+import type { WorkflowIntrospectionOperation } from "@cloudflare/workflows-shared/src/testing";
 
 class WorkflowImpl implements Workflow {
 	constructor(private binding: WorkflowBinding) {}
@@ -34,6 +35,27 @@ class WorkflowImpl implements Workflow {
 
 	async unsafeGetBindingName(): Promise<string> {
 		return this.binding.unsafeGetBindingName();
+	}
+
+	async unsafeStartIntrospection(
+		operations: WorkflowIntrospectionOperation[]
+	): Promise<string> {
+		return this.binding.unsafeStartIntrospection(operations);
+	}
+
+	async unsafeStopIntrospection(sessionId: string): Promise<void> {
+		return this.binding.unsafeStopIntrospection(sessionId);
+	}
+
+	async unsafeSetIntrospectionOperations(
+		sessionId: string,
+		operations: WorkflowIntrospectionOperation[]
+	): Promise<void> {
+		return this.binding.unsafeSetIntrospectionOperations(sessionId, operations);
+	}
+
+	async unsafeGetIntrospectionInstances(sessionId: string): Promise<string[]> {
+		return this.binding.unsafeGetIntrospectionInstances(sessionId);
 	}
 
 	async unsafeAbort(instanceId: string, reason?: string): Promise<void> {

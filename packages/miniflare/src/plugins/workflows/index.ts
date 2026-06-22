@@ -119,6 +119,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 				// NOTE(lduarte): the engine unique namespace key must be unique per workflow definition
 				// otherwise workerd will crash because there's two equal DO namespaces
 				const uniqueKey = `miniflare-workflows-${workflow.name}`;
+				const introspectionKey = `${workflow.scriptName ?? ""}:${workflow.name}`;
 
 				const workflowsBinding: Service = {
 					name: getUserBindingServiceName(
@@ -181,6 +182,10 @@ export const WORKFLOWS_PLUGIN: Plugin<
 							{
 								name: "WORKFLOW_NAME",
 								json: JSON.stringify(workflow.name),
+							},
+							{
+								name: "INTROSPECTION_KEY",
+								json: JSON.stringify(introspectionKey),
 							},
 							...(workflow.stepLimit !== undefined
 								? [

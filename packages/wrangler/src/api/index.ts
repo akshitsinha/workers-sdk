@@ -68,6 +68,10 @@ export type {
 	TestHarnessOptions,
 	WorkerHandle,
 	TestHarness,
+	WorkflowInstanceIntrospector,
+	WorkflowInstanceModifier,
+	WorkflowIntrospector,
+	WorkflowStepSelector,
 } from "./test-harness";
 
 // Exports from ./integrations

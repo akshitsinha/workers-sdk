@@ -1,27 +1,14 @@
-import {
-	instanceStatusName,
-	InstanceStatus as InstanceStatusNumber,
-} from "@cloudflare/workflows-shared/src/instance";
+import { createWorkflowInstanceIntrospector } from "@cloudflare/workflows-shared/src/testing";
 import { env } from "cloudflare:workers";
 import { runInRunnerObject } from "./durable-objects";
-import type { WorkflowBinding } from "@cloudflare/workflows-shared/src/binding";
 import type {
-	StepSelector,
+	WorkflowBinding,
+	WorkflowInstanceIntrospector,
 	WorkflowInstanceModifier,
-} from "@cloudflare/workflows-shared/src/modifier";
+	WorkflowIntrospector,
+} from "@cloudflare/workflows-shared/src/testing";
 
 type ModifierCallback = (m: WorkflowInstanceModifier) => Promise<void>;
-
-// See public facing `cloudflare:test` types for docs
-export interface WorkflowInstanceIntrospector {
-	modify(fn: ModifierCallback): Promise<WorkflowInstanceIntrospector>;
-
-	waitForStepResult(step: StepSelector): Promise<unknown>;
-
-	waitForStatus(status: string): Promise<void>;
-
-	dispose(): Promise<void>;
-}
 
 // Note(osilva): `introspectWorkflowInstance()` doesn’t need to be async, but we keep it that way
 // to avoid potential breaking changes later and to stay consistent with `introspectWorkflow`.
@@ -37,88 +24,7 @@ export async function introspectWorkflowInstance(
 			"[WorkflowIntrospector] Workflow binding and instance id are required."
 		);
 	}
-	return new WorkflowInstanceIntrospectorHandle(workflow, instanceId);
-}
-
-class WorkflowInstanceIntrospectorHandle implements WorkflowInstanceIntrospector {
-	#workflow: WorkflowBinding;
-	#instanceId: string;
-	#instanceModifier: WorkflowInstanceModifier | undefined;
-	#instanceModifierPromise: Promise<WorkflowInstanceModifier> | undefined;
-
-	constructor(workflow: WorkflowBinding, instanceId: string) {
-		this.#workflow = workflow;
-		this.#instanceId = instanceId;
-		this.#instanceModifierPromise = workflow
-			.unsafeGetInstanceModifier(instanceId)
-			.then((res) => {
-				this.#instanceModifier = res as WorkflowInstanceModifier;
-				this.#instanceModifierPromise = undefined;
-				return this.#instanceModifier;
-			});
-	}
-
-	async modify(fn: ModifierCallback): Promise<WorkflowInstanceIntrospector> {
-		if (this.#instanceModifierPromise !== undefined) {
-			this.#instanceModifier = await this.#instanceModifierPromise;
-		}
-		if (this.#instanceModifier === undefined) {
-			throw new Error(
-				"could not apply modifications due to internal error. Retrying the test may resolve the issue."
-			);
-		}
-
-		await fn(this.#instanceModifier);
-
-		return this;
-	}
-
-	async waitForStepResult(step: StepSelector): Promise<unknown> {
-		const stepResult = await this.#workflow.unsafeWaitForStepResult(
-			this.#instanceId,
-			step.name,
-			step.index
-		);
-
-		return stepResult;
-	}
-
-	async waitForStatus(status: InstanceStatus["status"]): Promise<void> {
-		if (status === instanceStatusName(InstanceStatusNumber.Queued)) {
-			// we currently don't have a queue mechanism, but it would happen before it
-			// starts running, so waiting for it to be queued should always return
-			return;
-		}
-		await this.#workflow.unsafeWaitForStatus(this.#instanceId, status);
-	}
-
-	async getOutput(): Promise<unknown> {
-		return await this.#workflow.unsafeGetOutputOrError(this.#instanceId, true);
-	}
-
-	async getError(): Promise<{ name: string; message: string }> {
-		return (await this.#workflow.unsafeGetOutputOrError(
-			this.#instanceId,
-			false
-		)) as { name: string; message: string };
-	}
-
-	async dispose(): Promise<void> {
-		await this.#workflow.unsafeAbort(this.#instanceId, "Instance dispose");
-	}
-
-	async [Symbol.asyncDispose](): Promise<void> {
-		await this.dispose();
-	}
-}
-
-// See public facing `cloudflare:test` types for docs
-export interface WorkflowIntrospector {
-	modifyAll(fn: ModifierCallback): Promise<void>;
-
-	get(): WorkflowInstanceIntrospector[];
-
-	dispose(): Promise<void>;
+	return createWorkflowInstanceIntrospector(workflow, instanceId);
 }
 
 // Note(osilva): `introspectWorkflow` could be sync with some changes, but we keep it async
@@ -232,7 +138,9 @@ export async function introspectWorkflow(
 	);
 }
 
-class WorkflowIntrospectorHandle implements WorkflowIntrospector {
+class WorkflowIntrospectorHandle implements WorkflowIntrospector<
+	WorkflowInstanceIntrospector[]
+> {
 	workflow: WorkflowBinding;
 	#modifierCallbacks: ModifierCallback[];
 	#instanceIntrospectors: WorkflowInstanceIntrospector[];
