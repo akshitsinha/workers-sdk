@@ -78,11 +78,9 @@ export interface WorkflowInstanceIntrospector {
 	[Symbol.asyncDispose](): Promise<void>;
 }
 
-export interface WorkflowIntrospector<
-	GetResult = Promise<WorkflowInstanceIntrospector[]>,
-> {
+export interface WorkflowIntrospector {
 	modifyAll(fn: ModifierCallback): Promise<void>;
-	get(): GetResult;
+	get(): Promise<WorkflowInstanceIntrospector[]>;
 	dispose(): Promise<void>;
 	[Symbol.asyncDispose](): Promise<void>;
 }

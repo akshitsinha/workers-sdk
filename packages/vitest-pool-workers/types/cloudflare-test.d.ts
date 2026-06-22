@@ -553,7 +553,7 @@ declare module "cloudflare:test" {
 	 *   await env.MY_WORKFLOW.create();
 	 *
 	 *   // 3. ASSERTION
-	 *   const instances = introspector.get();
+	 *   const instances = await introspector.get();
 	 *   for(const instance of instances) {
 	 *     await instance.waitForStatus("complete");
 	 *
@@ -587,7 +587,7 @@ declare module "cloudflare:test" {
 		 * Returns all `WorkflowInstanceIntrospector`s from Workflow instances
 		 * created after calling `introspectWorkflow`.
 		 */
-		get(): WorkflowInstanceIntrospector[];
+		get(): Promise<WorkflowInstanceIntrospector[]>;
 
 		/**
 		 *
