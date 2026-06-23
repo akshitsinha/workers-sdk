@@ -812,6 +812,80 @@ describe("User", () => {
 			// don't behave as if keyring is enabled.
 			expect(std.warn).toContain("`--use-keyring` was not persisted");
 		});
+
+		it("--use-keyring persists the preference and skips the misleading rollback when CLOUDFLARE_AUTH_USE_KEYRING=false overrides for this command", async ({
+			expect,
+		}) => {
+			// Regression: the eager validation in `commands.ts` resolves the
+			// active credential store via `getCredentialStore()`. When
+			// `CLOUDFLARE_AUTH_USE_KEYRING=false` is set, the resolver
+			// short-circuits to `FileCredentialStore` *unconditionally*
+			// (resolver.ts: the env-var check runs before any keyring
+			// probe), so `store.kind !== "encrypted-file"` would always
+			// fire. That rolled back the user's persisted preference and
+			// emitted a misleading "not available on this host" warning,
+			// even though the env var only governs *this* command and the
+			// keyring backend may be perfectly reachable.
+			//
+			// The fix skips the eager validation when the env var
+			// explicitly forces the file store. The persisted preference
+			// must survive for future commands, the misleading warnings
+			// must not appear, and this command's credentials must still
+			// land in the plaintext file (env-var precedence is unchanged).
+			const { getEncryptedAuthConfigFilePath } =
+				await import("@cloudflare/workers-auth");
+			const { readUserPreferences } = await import("../user/preferences");
+
+			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "false");
+
+			expect(readUserPreferences().keyring_enabled).toBeUndefined();
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --use-keyring");
+
+			// The persistent preference must be written, so a later
+			// command run *without* the env var picks up the user's opt-in.
+			expect(readUserPreferences().keyring_enabled).toBe(true);
+
+			// The user must have been told that the env var overrides
+			// the flag for this command. That warning is the contract
+			// the rest of the behavior depends on.
+			expect(std.warn).toContain(
+				"CLOUDFLARE_AUTH_USE_KEYRING=false overrides the --use-keyring flag for this command"
+			);
+
+			// The misleading rollback warnings must NOT appear: the env
+			// var, not the host's keyring availability, is the reason
+			// we're using the file store right now.
+			expect(std.warn).not.toContain("Keyring storage isn't available");
+			expect(std.warn).not.toContain("`--use-keyring` was not persisted");
+
+			// Env-var precedence is unchanged: this command's credentials
+			// land in the plaintext file, and the encrypted file is not
+			// created.
+			expect(fs.existsSync(getAuthConfigFilePath())).toBe(true);
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async ({

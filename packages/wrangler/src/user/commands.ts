@@ -151,7 +151,7 @@ export const loginCommand = createCommand({
 
 			updateUserPreferences({ keyring_enabled: args.useKeyring });
 
-			if (args.useKeyring) {
+			if (args.useKeyring && envOverride !== false) {
 				// Resolve the credential store eagerly so any platform-specific
 				// install (Windows lazy-install of @napi-rs/keyring) or probe
 				// failure (Linux missing secret-tool, CI without TTY) surfaces
@@ -173,6 +173,17 @@ export const loginCommand = createCommand({
 				//     top of that warning, because every future command would
 				//     then re-resolve, soft-fall-back again, and warn again
 				//     until the user explicitly ran `--no-use-keyring`.
+				//
+				// We skip this validation when `CLOUDFLARE_AUTH_USE_KEYRING=false`
+				// is set: the resolver short-circuits to `FileCredentialStore`
+				// unconditionally in that case (see `resolver.ts`), so the
+				// `kind !== "encrypted-file"` check would always fire and
+				// roll back the user's persisted preference along with a
+				// misleading "not available on this host" warning. The env
+				// var only governs *this* command (we already warned the
+				// user about that above); the persisted preference is for
+				// future commands, which will resolve normally and warn at
+				// that point if the keyring backend isn't actually reachable.
 				try {
 					const store = getCredentialStore();
 					if (store.kind !== "encrypted-file") {
