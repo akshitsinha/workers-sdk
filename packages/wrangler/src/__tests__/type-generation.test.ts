@@ -3724,10 +3724,7 @@ describe("generate types - CLI", () => {
 		}) => {
 			vi.stubEnv("X_DO_EXPORTS", "true");
 
-			// Source defines all three live classes. Two are accessible via a
-			// binding (`BoundDO`) and the others (`UnboundDO`, `IncomingDO`) are
-			// only reachable through `ctx.exports`, which is typed via
-			// `Cloudflare.GlobalProps.durableNamespaces`.
+			// `UnboundDO` and `IncomingDO` are reachable only through `ctx.exports`.
 			fs.writeFileSync(
 				"./index.ts",
 				`import { DurableObject } from "cloudflare:workers";
@@ -3754,7 +3751,7 @@ export default { async fetch() { return new Response("ok"); } };`
 							storage: "sqlite",
 							transfer_from: "source-worker",
 						},
-						// Tombstones — must NOT appear in `durableNamespaces`.
+						// Tombstones must not appear in `durableNamespaces`.
 						OldGone: { type: "durable-object", state: "deleted" },
 						LegacyName: {
 							type: "durable-object",
@@ -3768,11 +3765,6 @@ export default { async fetch() { return new Response("ok"); } };`
 
 			await runWrangler("types --include-runtime=false");
 
-			// The single snapshot below pins everything we care about:
-			//   - `env.BOUND_DO` is typed via the bound entry.
-			//   - No `env.X` entries for `UnboundDO` / `IncomingDO`.
-			//   - `durableNamespaces` is the union of the three live classes.
-			//   - Tombstone class names are absent from `durableNamespaces`.
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
