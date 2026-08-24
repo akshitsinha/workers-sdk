@@ -130,6 +130,7 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
+import { ADMIN_API as FLAGSHIP_ADMIN_API } from "./workers/flagship/constants";
 import { ADMIN_API } from "./workers/secrets-store/constants";
 import type {
 	MiniflareOptions,
@@ -167,6 +168,9 @@ import type {
 } from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type { Awaitable } from "./workers";
+import type { FlagshipAdmin } from "./workers/flagship/admin";
+import type { EvaluationDetails, FlagValue } from "./workers/flagship/evaluate";
+import type { Flag, FlagInput } from "./workers/flagship/flags";
 import type {
 	CacheStorage,
 	D1Database,
@@ -3462,6 +3466,17 @@ export class Miniflare {
 	): Promise<Flagship> {
 		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName);
 	}
+	getFlagshipBindingAPI(
+		bindingName: string,
+		workerName?: string
+	): Promise<() => FlagshipAdmin> {
+		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName).then(
+			(binding) => {
+				// @ts-expect-error We exposed an admin API on this key
+				return binding[FLAGSHIP_ADMIN_API];
+			}
+		);
+	}
 	getStreamBinding(
 		bindingName: string,
 		workerName?: string
@@ -3620,6 +3635,28 @@ export class Miniflare {
 }
 
 export type { WorkerdStructuredLog } from "./plugins/core";
+
+export type { FlagshipAdmin } from "./workers/flagship/admin";
+
+export type {
+	BaseCondition,
+	Condition,
+	ErrorCode,
+	LogicalCondition,
+	EvaluationContext,
+	EvaluationDetails,
+	EvaluationReason,
+	FlagValue,
+	Operator,
+	Rollout,
+} from "./workers/flagship/evaluate";
+export type {
+	Flag,
+	FlagChanges,
+	FlagInput,
+	FlagType,
+	Rule,
+} from "./workers/flagship/flags";
 
 export interface SecretsStoreSecretAdmin {
 	create(value: string): Promise<string>;
