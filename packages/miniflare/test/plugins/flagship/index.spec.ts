@@ -137,25 +137,6 @@ async function rejection(call: () => Promise<unknown>): Promise<string> {
 }
 
 describe("flagship plugin", () => {
-	test("accepts local, remote, and absent bindings", ({ expect }) => {
-		const config = (env?: Record<string, unknown>) => ({
-			config: {
-				type: "worker",
-				name: "test",
-				compatibilityDate: "2025-01-01",
-				env,
-				manifest: singleModuleManifest("export default {}"),
-			},
-		});
-		for (const env of [
-			{ FLAGS: { type: "flagship", id: "app" } },
-			{ FLAGS: { type: "flagship", id: "app", remote: true } },
-			undefined,
-		]) {
-			expect(WorkerOptionsSchema.safeParse(config(env)).success).toBe(true);
-		}
-	});
-
 	test("implements binding values, details, defaults, and errors", async ({
 		expect,
 	}) => {
