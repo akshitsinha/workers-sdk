@@ -91,6 +91,28 @@ const LIST_OPERATORS = new Set<Operator>(["in", "not_in"]);
 
 const MAX_CONDITION_DEPTH = 5;
 
+function isJsonValue(value: unknown, seen = new Set<object>()): boolean {
+	if (
+		value === null ||
+		typeof value === "boolean" ||
+		typeof value === "string"
+	) {
+		return true;
+	}
+	if (typeof value === "number") {
+		return Number.isFinite(value);
+	}
+	if (typeof value !== "object" || seen.has(value)) {
+		return false;
+	}
+
+	seen.add(value);
+	const values = Array.isArray(value) ? value : Object.values(value);
+	const valid = values.every((entry) => isJsonValue(entry, seen));
+	seen.delete(value);
+	return valid;
+}
+
 export function getFlagType(variations: Record<string, unknown>): FlagType {
 	const [first] = Object.values(variations);
 	switch (typeof first) {
@@ -165,6 +187,11 @@ function validateCondition(
 	if (value === undefined) {
 		throw new Error(`Flag '${key}' has a condition without a value`);
 	}
+	if (!isJsonValue(value)) {
+		throw new Error(
+			`Flag '${key}' has a condition with a value that cannot be stored as JSON`
+		);
+	}
 }
 
 export function validateFlagInput(input: FlagInput): void {
@@ -195,6 +222,11 @@ export function validateFlagInput(input: FlagInput): void {
 	}
 	if (Object.values(input.variations).some((value) => value === null)) {
 		throw new Error(`Flag '${input.key}' variations cannot be null`);
+	}
+	if (Object.values(input.variations).some((value) => !isJsonValue(value))) {
+		throw new Error(
+			`Flag '${input.key}' variations must contain values that can be stored as JSON`
+		);
 	}
 
 	if (!variationNames.includes(input.default_variation)) {

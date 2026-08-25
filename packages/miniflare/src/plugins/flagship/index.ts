@@ -6,7 +6,6 @@ import {
 	getEnvBindingsOfType,
 	getPersistPath,
 	getRemoteProxyConnectionString,
-	getUserBindingServiceName,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
@@ -14,10 +13,14 @@ import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 export const FLAGSHIP_PLUGIN_NAME = "flagship";
-const FLAGSHIP_REMOTE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:remote`;
-const FLAGSHIP_OBJECT_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:object`;
-const FLAGSHIP_STORAGE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:storage`;
+const FLAGSHIP_REMOTE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:internal:remote`;
+const FLAGSHIP_OBJECT_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:internal:object`;
+const FLAGSHIP_STORAGE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:internal:storage`;
 const FLAGSHIP_OBJECT_CLASS_NAME = "FlagshipObject";
+
+function getFlagshipAppServiceName(appId: string): string {
+	return `${FLAGSHIP_PLUGIN_NAME}:app:${encodeURIComponent(appId)}`;
+}
 
 // Rollout bucketing is seeded with the account tag. Local flag definitions are
 // their own source of truth and an account tag is not reliably available
@@ -46,7 +49,7 @@ export const FLAGSHIP_PLUGIN: Plugin = {
 				return {
 					name,
 					service: {
-						name: getUserBindingServiceName(FLAGSHIP_PLUGIN_NAME, binding.id),
+						name: getFlagshipAppServiceName(binding.id),
 						entrypoint: "FlagshipBinding",
 					},
 				};
@@ -121,7 +124,7 @@ export const FLAGSHIP_PLUGIN: Plugin = {
 
 		for (const appId of localAppIds) {
 			services.push({
-				name: getUserBindingServiceName(FLAGSHIP_PLUGIN_NAME, appId),
+				name: getFlagshipAppServiceName(appId),
 				worker: {
 					compatibilityDate: "2025-01-01",
 					modules: [{ name: "binding.worker.js", esModule: BINDING_SCRIPT() }],

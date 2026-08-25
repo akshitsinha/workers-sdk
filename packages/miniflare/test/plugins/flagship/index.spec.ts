@@ -137,6 +137,23 @@ async function rejection(call: () => Promise<unknown>): Promise<string> {
 }
 
 describe("flagship plugin", () => {
+	test("keeps app service names separate from internal services", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare(
+			options({
+				OBJECT: { type: "flagship", id: "object" },
+				REMOTE: { type: "flagship", id: "remote" },
+				STORAGE: { type: "flagship", id: "storage" },
+			})
+		);
+		useDispose(mf);
+
+		await expect(getAdmin(mf, "OBJECT")).resolves.toBeDefined();
+		await expect(getAdmin(mf, "REMOTE")).resolves.toBeDefined();
+		await expect(getAdmin(mf, "STORAGE")).resolves.toBeDefined();
+	});
+
 	test("implements binding values, details, defaults, and errors", async ({
 		expect,
 	}) => {
@@ -244,6 +261,10 @@ describe("flagship plugin", () => {
 			[{ variations: {} }, "must define at least one variation"],
 			[{ variations: { on: true, off: "no" } }, "must all share the same type"],
 			[{ variations: { on: null, off: null } }, "variations cannot be null"],
+			[
+				{ variations: { on: Number.POSITIVE_INFINITY, off: 0 } },
+				"variations must contain values that can be stored as JSON",
+			],
 			[
 				{ default_variation: "missing" },
 				"default variation 'missing' is not defined",
