@@ -1,0 +1,95 @@
+.changeset/local-flagship-explorer.md
+  s_b0997ccd73d1b9::t_08b14b369021f4 1-10
+packages/local-explorer-ui/src/__e2e__/flagship/flagship.spec.ts
+  s_b0997ccd73d1b9::t_4b66e590cfa8c5 1-548
+packages/local-explorer-ui/src/__e2e__/utils.ts
+  s_b0997ccd73d1b9::t_1cf4153e2700b6 82-165,310-314
+packages/local-explorer-ui/src/__tests__/flagship/flag-helpers.test.ts
+  s_b0997ccd73d1b9::t_01b5bb21c4c02e 1-100
+packages/local-explorer-ui/src/__tests__/flagship/rule-helpers.test.ts
+  s_b0997ccd73d1b9::t_8a3d129bfd97fb 1-470
+packages/local-explorer-ui/src/__tests__/utils/agent-prompt.test.ts
+  s_b0997ccd73d1b9::t_41b6af520edf38 23-25
+packages/local-explorer-ui/src/__tests__/utils/sidebar-state.test.ts
+  s_b0997ccd73d1b9::t_718ccfddd9147a 115,163,190
+packages/local-explorer-ui/src/assets/icons/flagship.svg
+  s_b0997ccd73d1b9::t_8b6bd2374fb30f 1
+packages/local-explorer-ui/src/components/Sidebar.tsx
+  s_b0997ccd73d1b9::t_f8221fc62dbc71 18,124,213-228
+packages/local-explorer-ui/src/components/flagship/FlagDialog.tsx
+  s_b0997ccd73d1b9::t_74703d7f63e1e7 1-732
+packages/local-explorer-ui/src/components/flagship/FlagTable.tsx
+  s_b0997ccd73d1b9::t_05c25853da31c4 1-428
+packages/local-explorer-ui/src/components/flagship/FormFields.tsx
+  s_b0997ccd73d1b9::t_90391c03bb9910 1-121
+packages/local-explorer-ui/src/components/flagship/RuleEditor.tsx
+  s_b0997ccd73d1b9::t_5ffada71b6f51f 1-587
+packages/local-explorer-ui/src/components/flagship/TestFlagDialog.tsx
+  s_b0997ccd73d1b9::t_126a4624fbca61 1-450
+packages/local-explorer-ui/src/components/flagship/flag-helpers.ts
+  s_b0997ccd73d1b9::t_789cfe92f7ccdc 1-198
+packages/local-explorer-ui/src/components/flagship/rule-helpers.ts
+  s_b0997ccd73d1b9::t_14a346a1c29a1e 1-427
+packages/local-explorer-ui/src/components/workflows/Timestamp.tsx
+  s_b0997ccd73d1b9::t_e68e10f39ee526 2
+packages/local-explorer-ui/src/routeTree.gen.ts
+  s_b0997ccd73d1b9::t_38875edc4cb2b0 18,58-62,110,126,142,161,177,192,210,262-268,375
+packages/local-explorer-ui/src/routes/flagship/$appId.tsx
+  s_b0997ccd73d1b9::t_e15748c54af4ff 1-391
+packages/local-explorer-ui/src/routes/workflows/$workflowName/index.tsx
+  s_b0997ccd73d1b9::t_deb1ec2c8b8bb5 44
+packages/local-explorer-ui/src/utils/agent-prompt.ts
+  s_b0997ccd73d1b9::t_9b2f9df49597f5 1
+packages/local-explorer-ui/src/utils/sidebar-state.ts
+  s_b0997ccd73d1b9::t_86eb416910ccef 11,25
+packages/local-explorer-ui/src/utils/time.ts
+  s_b0997ccd73d1b9::t_f44e78b71a72b9 1-32
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_b0997ccd73d1b9::t_292c96b5ea9d23 1800-2271,2274-2383,2630-2636
+packages/miniflare/src/plugins/core/explorer.ts
+  s_b0997ccd73d1b9::t_8157d49052b2ab 11,15-16,35,161-175,206-207,215,218-227,395,460-471
+packages/miniflare/src/plugins/core/index.ts
+  s_b0997ccd73d1b9::t_8797ac5fe0345f 986-1004,1008-1009
+packages/miniflare/src/plugins/core/types.ts
+  s_b0997ccd73d1b9::t_3d89687d50ac34 11-17,64-68
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_b0997ccd73d1b9::t_71c82bbf253959 23-25,41-49,395-442
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_b0997ccd73d1b9::t_359b047273f34a 74-112
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_b0997ccd73d1b9::t_263bd3ed51c394 424-513,704-707,2605-2882
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_b0997ccd73d1b9::t_c33e9fa264cd88 357-393,485,1577-1716
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_b0997ccd73d1b9::t_baa778f3c6c7b2 2426-2913,3802-3940,4201-4207
+packages/miniflare/src/workers/local-explorer/resources/flagship.ts
+  s_b0997ccd73d1b9::t_b615bc3e5db672 1-318
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_b0997ccd73d1b9::t_a3b3eb17742ada 35-41
+packages/miniflare/test/plugins/local-explorer/aggregation.spec.ts
+  s_b0997ccd73d1b9::t_9fbfd34b671776 72,109,391-504
+packages/miniflare/test/plugins/local-explorer/flagship.spec.ts
+  s_b0997ccd73d1b9::t_4c3f5936d9c42f 1-948
+packages/miniflare/test/plugins/local-explorer/index.spec.ts
+  s_b0997ccd73d1b9::t_1266d6a0ea611a 761,791,814
+packages/vite-plugin-cloudflare/src/__tests__/agent-hint.spec.ts
+  s_b0997ccd73d1b9::t_a82be7bb6026ce 65-67,74
+packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts
+  s_b0997ccd73d1b9::t_0026cd012a15af 88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "704fdd1ce1ca34d65b73bfe529717a29e9c3392e",
+  "prompts": {},
+  "sessions": {
+    "s_b0997ccd73d1b9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ff1a61e35ffejsmUVfN4SqHeQh",
+        "model": "grok-4.6"
+      },
+      "human_author": "Akshit Sinha <asinha@cloudflare.com>"
+    }
+  }
+}
