@@ -15,7 +15,7 @@ import type {
 	FlagType,
 	FlagValue,
 } from "./evaluate";
-import type { Flag, FlagChanges, FlagInput } from "./flags";
+import type { Flag, FlagInput } from "./flags";
 import type { FlagshipObject, WriteResult } from "./object.worker";
 
 interface Env {
