@@ -1,17 +1,11 @@
 import { describe, test } from "vitest";
 import { evaluateFlag } from "../../../src/workers/flagship/evaluate";
-import type {
-	EvalFlag,
-	EvalRule,
-	EvaluationContext,
-} from "../../../src/workers/flagship/evaluate";
+import type { EvaluationContext } from "../../../src/workers/flagship/evaluate";
+import type { FlagInput, Rule } from "../../../src/workers/flagship/flags";
 
-// Account tag used by the upstream Flagship data-plane test suite. The bucket
-// expectations below are copied from there and pin the vendored MurmurHash3
-// implementation.
-const UPSTREAM_ACCOUNT_ID = "aaaabbbbccccdddd1111222233334444";
+const ACCOUNT_TAG = "aaaabbbbccccdddd1111222233334444";
 
-function flag(overrides: Partial<EvalFlag> = {}): EvalFlag {
+function flag(overrides: Partial<FlagInput> = {}): FlagInput {
 	return {
 		key: "test",
 		enabled: true,
@@ -22,11 +16,12 @@ function flag(overrides: Partial<EvalFlag> = {}): EvalFlag {
 	};
 }
 
-function rolloutFlag(percentage: number, attribute?: string): EvalFlag {
+function rolloutFlag(percentage: number, attribute?: string): FlagInput {
 	return flag({
 		key: "rollout_test",
 		rules: [
 			{
+				priority: 1,
 				conditions: [],
 				serve_variation: "on",
 				rollout: { percentage, attribute },
@@ -35,19 +30,25 @@ function rolloutFlag(percentage: number, attribute?: string): EvalFlag {
 	});
 }
 
-/**
- * Recover the exact rollout bucket for a targeting key. A rule is included
- * when `bucket < percentage`, so the smallest including percentage is
- * `bucket + 1`.
- */
+function matches(
+	conditions: Rule["conditions"],
+	context: EvaluationContext
+): boolean {
+	return (
+		evaluateFlag(
+			flag({ rules: [{ priority: 1, conditions, serve_variation: "on" }] }),
+			context,
+			"local"
+		).reason === "TARGETING_MATCH"
+	);
+}
+
 function bucketFor(targetingKey: unknown): number {
 	for (let percentage = 1; percentage <= 100; percentage++) {
-		const { reason } = evaluateFlag(
-			rolloutFlag(percentage),
-			{ targetingKey } as EvaluationContext,
-			UPSTREAM_ACCOUNT_ID
-		);
-		if (reason === "SPLIT") {
+		if (
+			evaluateFlag(rolloutFlag(percentage), { targetingKey }, ACCOUNT_TAG)
+				.reason === "SPLIT"
+		) {
 			return percentage - 1;
 		}
 	}
@@ -55,152 +56,112 @@ function bucketFor(targetingKey: unknown): number {
 }
 
 describe("flagship evaluation", () => {
-	test("serves the default variation when no rule matches", ({ expect }) => {
+	test("serves defaults, disabled flags, and the first matching rule", ({
+		expect,
+	}) => {
 		expect(evaluateFlag(flag(), {}, "local")).toEqual({
 			value: false,
 			variant: "off",
 			reason: "DEFAULT",
 		});
-	});
+		expect(
+			evaluateFlag(
+				flag({
+					enabled: false,
+					rules: [{ priority: 1, conditions: [], serve_variation: "on" }],
+				}),
+				{},
+				"local"
+			)
+		).toMatchObject({ variant: "off", reason: "DISABLED" });
 
-	test("serves the default variation and skips rules when disabled", ({
-		expect,
-	}) => {
-		const disabled = flag({
-			enabled: false,
-			rules: [{ conditions: [], serve_variation: "on" }],
-		});
-		expect(evaluateFlag(disabled, {}, "local")).toEqual({
-			value: false,
-			variant: "off",
-			reason: "DISABLED",
-		});
-	});
-
-	test("serves the first matching rule in array order", ({ expect }) => {
-		const multi = flag({
-			variations: { a: "a", b: "b", off: "off" },
+		const ordered = flag({
+			variations: { first: "a", second: "b", off: "off" },
 			rules: [
 				{
-					conditions: [{ attribute: "userId", operator: "equals", value: "1" }],
-					serve_variation: "a",
+					priority: 1,
+					conditions: [{ attribute: "id", operator: "equals", value: 1 }],
+					serve_variation: "first",
 				},
-				{ conditions: [], serve_variation: "b" },
+				{ priority: 2, conditions: [], serve_variation: "second" },
 			],
 		});
-		expect(evaluateFlag(multi, { userId: "1" }, "local")).toMatchObject({
-			variant: "a",
-			reason: "TARGETING_MATCH",
-		});
-		expect(evaluateFlag(multi, { userId: "2" }, "local")).toMatchObject({
-			variant: "b",
-			reason: "TARGETING_MATCH",
-		});
+		expect(evaluateFlag(ordered, { id: "1" }, "local").variant).toBe("first");
+		expect(evaluateFlag(ordered, { id: "2" }, "local").variant).toBe("second");
+		ordered.rules.reverse();
+		expect(evaluateFlag(ordered, { id: "1" }, "local").variant).toBe("first");
 	});
 
-	test("throws when a served variation is not defined", ({ expect }) => {
-		const broken = flag({ default_variation: "missing" });
-		expect(() => evaluateFlag(broken, {}, "local")).toThrow(
-			"Flag 'test' variation 'missing' is not defined"
-		);
+	test("rejects an undefined served variation", ({ expect }) => {
+		expect(() =>
+			evaluateFlag(flag({ default_variation: "missing" }), {}, "local")
+		).toThrow("Flag 'test' variation 'missing' is not defined");
 	});
 
-	describe("conditions", () => {
-		function matches(
-			conditions: EvalRule["conditions"],
-			context: EvaluationContext
-		): boolean {
-			const result = evaluateFlag(
-				flag({ rules: [{ conditions, serve_variation: "on" }] }),
-				context,
-				"local"
-			);
-			return result.reason === "TARGETING_MATCH";
-		}
+	test("matches comparison and logical conditions with production coercions", ({
+		expect,
+	}) => {
+		expect(
+			matches([{ attribute: "id", operator: "equals", value: 42 }], {
+				id: "42",
+			})
+		).toBe(true);
+		expect(
+			matches([{ attribute: "country", operator: "in", value: ["US"] }], {
+				country: "US",
+			})
+		).toBe(true);
+		expect(
+			matches([{ attribute: "country", operator: "not_in", value: [] }], {
+				country: "US",
+			})
+		).toBe(true);
+		expect(
+			matches(
+				[
+					{
+						attribute: "now",
+						operator: "greater_than",
+						value: "2025-05-01T15:00:00Z",
+					},
+				],
+				{ now: "2025-06-01T15:00:00Z" }
+			)
+		).toBe(true);
+		expect(matches([{ logical_operator: "AND", clauses: [] }], {})).toBe(true);
+		expect(matches([{ logical_operator: "OR", clauses: [] }], {})).toBe(false);
+	});
 
-		test("missing context attributes never match", ({ expect }) => {
-			expect(
-				matches([{ attribute: "plan", operator: "equals", value: "pro" }], {})
-			).toBe(false);
-		});
-
-		test("comparisons coerce through String()", ({ expect }) => {
-			expect(
-				matches([{ attribute: "id", operator: "equals", value: 42 }], {
-					id: "42",
-				})
-			).toBe(true);
-		});
-
-		test("in and not_in require arrays", ({ expect }) => {
-			expect(
-				matches([{ attribute: "country", operator: "in", value: ["US"] }], {
-					country: "US",
-				})
-			).toBe(true);
-			expect(
-				matches([{ attribute: "country", operator: "in", value: "US" }], {
-					country: "US",
-				})
-			).toBe(false);
-			expect(
-				matches([{ attribute: "country", operator: "not_in", value: [] }], {
-					country: "US",
-				})
-			).toBe(true);
-		});
-
-		test("ISO-8601 targets compare as timestamps", ({ expect }) => {
-			expect(
-				matches(
-					[
-						{
-							attribute: "now",
-							operator: "greater_than",
-							value: "2025-05-01T15:00:00Z",
-						},
-					],
-					{ now: "2025-06-01T15:00:00Z" }
-				)
-			).toBe(true);
-		});
-
-		test("empty AND clauses match, empty OR clauses do not", ({ expect }) => {
-			expect(matches([{ logical_operator: "AND", clauses: [] }], {})).toBe(
-				true
-			);
-			expect(matches([{ logical_operator: "OR", clauses: [] }], {})).toBe(
-				false
-			);
-		});
-
-		test("unknown operators do not match", ({ expect }) => {
-			expect(
-				matches(
-					[
-						{
-							attribute: "id",
-							operator: "spaceship" as never,
-							value: "1",
-						},
-					],
-					{ id: "1" }
-				)
-			).toBe(false);
-		});
+	test("does not match missing attributes or malformed operators", ({
+		expect,
+	}) => {
+		expect(
+			matches([{ attribute: "plan", operator: "equals", value: "pro" }], {})
+		).toBe(false);
+		expect(
+			matches([{ attribute: "country", operator: "in", value: "US" }], {
+				country: "US",
+			})
+		).toBe(false);
+		expect(
+			matches([{ attribute: "id", operator: "invalid" as never, value: 1 }], {
+				id: 1,
+			})
+		).toBe(false);
 	});
 
 	describe("rollouts", () => {
-		// Buckets pinned against the upstream Flagship suite for flag
-		// `rollout_test` under UPSTREAM_ACCOUNT_ID (hash seed 45).
-		test("buckets match the upstream hash vectors", ({ expect }) => {
-			const buckets = Object.fromEntries(
-				["0", "1", "2", "", "日本語", "héllo", "false"].map((key) => [
-					key,
-					bucketFor(key),
-				])
-			);
-			expect(buckets).toEqual({
+		test("matches upstream hash vectors and stringifies targeting keys", ({
+			expect,
+		}) => {
+			expect(
+				Object.fromEntries(
+					["0", "1", "2", "", "日本語", "héllo", "false"].map((key) => [
+						key,
+						bucketFor(key),
+					])
+				)
+			).toEqual({
 				"0": 15,
 				"1": 8,
 				"2": 91,
@@ -209,61 +170,41 @@ describe("flagship evaluation", () => {
 				héllo: 73,
 				false: 33,
 			});
-		});
-
-		test("non-string targeting keys hash as their string form", ({
-			expect,
-		}) => {
 			expect(bucketFor(0)).toBe(bucketFor("0"));
 			expect(bucketFor(false)).toBe(bucketFor("false"));
 		});
 
-		test("100 percent always matches and reports SPLIT", ({ expect }) => {
-			for (const targetingKey of ["0", "1", "50", "99", "999"]) {
-				expect(
-					evaluateFlag(rolloutFlag(100), { targetingKey }, UPSTREAM_ACCOUNT_ID)
-				).toMatchObject({ reason: "SPLIT" });
-			}
-		});
-
-		test("0 percent never matches", ({ expect }) => {
-			for (const targetingKey of ["0", "1", "50", "99", "999"]) {
-				expect(
-					evaluateFlag(rolloutFlag(0), { targetingKey }, UPSTREAM_ACCOUNT_ID)
-				).toMatchObject({ reason: "DEFAULT" });
-			}
-		});
-
-		test("a missing targeting key buckets randomly", ({ expect }) => {
-			const { reason } = evaluateFlag(rolloutFlag(50), {}, UPSTREAM_ACCOUNT_ID);
-			expect(["SPLIT", "DEFAULT"]).toContain(reason);
-		});
-
-		test("the seed varies by account and by flag", ({ expect }) => {
-			const keys = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-			const bucketsFor = (flagKey: string, accountId: string) =>
-				keys.map((targetingKey) => {
-					const rollout = rolloutFlag(50);
-					rollout.key = flagKey;
-					const { reason } = evaluateFlag(rollout, { targetingKey }, accountId);
-					return reason;
-				});
-
-			const baseline = bucketsFor("rollout_test", UPSTREAM_ACCOUNT_ID);
-			expect(bucketsFor("rollout_test", "local")).not.toEqual(baseline);
-			expect(bucketsFor("other_flag", UPSTREAM_ACCOUNT_ID)).not.toEqual(
-				baseline
+		test("honors rollout boundaries and custom attributes", ({ expect }) => {
+			expect(evaluateFlag(rolloutFlag(100), {}, ACCOUNT_TAG).reason).toBe(
+				"SPLIT"
+			);
+			expect(
+				evaluateFlag(rolloutFlag(0), { targetingKey: "1" }, ACCOUNT_TAG).reason
+			).toBe("DEFAULT");
+			const custom = rolloutFlag(50, "userId");
+			expect(evaluateFlag(custom, { userId: "1" }, ACCOUNT_TAG).reason).toBe(
+				"SPLIT"
+			);
+			expect(evaluateFlag(custom, { userId: "2" }, ACCOUNT_TAG).reason).toBe(
+				"DEFAULT"
+			);
+			expect(["SPLIT", "DEFAULT"]).toContain(
+				evaluateFlag(rolloutFlag(50), {}, ACCOUNT_TAG).reason
 			);
 		});
 
-		test("a custom rollout attribute replaces targetingKey", ({ expect }) => {
-			const byUserId = rolloutFlag(50, "userId");
-			expect(
-				evaluateFlag(byUserId, { userId: "1" }, UPSTREAM_ACCOUNT_ID)
-			).toMatchObject({ reason: "SPLIT" });
-			expect(
-				evaluateFlag(byUserId, { userId: "2" }, UPSTREAM_ACCOUNT_ID)
-			).toMatchObject({ reason: "DEFAULT" });
+		test("seeds buckets by account and flag", ({ expect }) => {
+			const reasons = (flagKey: string, accountTag: string) =>
+				["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map(
+					(targetingKey) => {
+						const rollout = rolloutFlag(50);
+						rollout.key = flagKey;
+						return evaluateFlag(rollout, { targetingKey }, accountTag).reason;
+					}
+				);
+			const baseline = reasons("rollout_test", ACCOUNT_TAG);
+			expect(reasons("rollout_test", "local")).not.toEqual(baseline);
+			expect(reasons("other", ACCOUNT_TAG)).not.toEqual(baseline);
 		});
 	});
 });

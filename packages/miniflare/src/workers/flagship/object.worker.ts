@@ -21,12 +21,16 @@ export type WriteResult =
 	| { status: "missing" }
 	| { status: "exists" };
 
-function validate(input: FlagInput): { message: string } | null {
+type InvalidResult = Extract<WriteResult, { status: "invalid" }>;
+
+function invalidResult(input: FlagInput): InvalidResult | undefined {
 	try {
 		validateFlagInput(input);
-		return null;
 	} catch (error) {
-		return { message: error instanceof Error ? error.message : String(error) };
+		return {
+			status: "invalid",
+			message: error instanceof Error ? error.message : String(error),
+		};
 	}
 }
 
@@ -82,26 +86,21 @@ export class FlagshipObject extends DurableObject {
 	}
 
 	create(input: FlagInput): WriteResult {
-		const invalid = validate(input);
-		if (invalid !== null) {
-			return { status: "invalid", message: invalid.message };
+		const invalid = invalidResult(input);
+		if (invalid !== undefined) {
+			return invalid;
 		}
 		if (this.get(input.key) !== null) {
 			return { status: "exists" };
 		}
-		return { status: "written", flag: this.#write(toStoredFlag(input)) };
+		return this.#writeResult(input);
 	}
 
 	update(key: string, input: FlagInput): WriteResult {
 		if (this.get(key) === null) {
 			return { status: "missing" };
 		}
-		const next = { ...input, key };
-		const invalid = validate(next);
-		if (invalid !== null) {
-			return { status: "invalid", message: invalid.message };
-		}
-		return { status: "written", flag: this.#write(toStoredFlag(next)) };
+		return this.#validateAndWrite({ ...input, key });
 	}
 
 	patch(key: string, changes: FlagChanges): WriteResult {
@@ -120,19 +119,11 @@ export class FlagshipObject extends DurableObject {
 			variations: changes.variations ?? current.variations,
 			rules: changes.rules ?? current.rules,
 		};
-		const invalid = validate(next);
-		if (invalid !== null) {
-			return { status: "invalid", message: invalid.message };
-		}
-		return { status: "written", flag: this.#write(toStoredFlag(next)) };
+		return this.#validateAndWrite(next);
 	}
 
 	put(input: FlagInput): WriteResult {
-		const invalid = validate(input);
-		if (invalid !== null) {
-			return { status: "invalid", message: invalid.message };
-		}
-		return { status: "written", flag: this.#write(toStoredFlag(input)) };
+		return this.#validateAndWrite(input);
 	}
 
 	putAll(
@@ -140,9 +131,9 @@ export class FlagshipObject extends DurableObject {
 		accountTag: string
 	): { status: "written" } | { status: "invalid"; message: string } {
 		for (const input of inputs) {
-			const invalid = validate(input);
-			if (invalid !== null) {
-				return { status: "invalid", message: invalid.message };
+			const invalid = invalidResult(input);
+			if (invalid !== undefined) {
+				return invalid;
 			}
 		}
 		const stored = inputs.map(toStoredFlag);
@@ -161,6 +152,14 @@ export class FlagshipObject extends DurableObject {
 		}
 		this.sql.exec("DELETE FROM flags WHERE key = ?", key);
 		return true;
+	}
+
+	#validateAndWrite(input: FlagInput): WriteResult {
+		return invalidResult(input) ?? this.#writeResult(input);
+	}
+
+	#writeResult(input: FlagInput): WriteResult {
+		return { status: "written", flag: this.#write(toStoredFlag(input)) };
 	}
 
 	#write(flag: Flag): Flag {

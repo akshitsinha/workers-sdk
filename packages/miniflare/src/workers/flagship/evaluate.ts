@@ -1,17 +1,7 @@
-// Vendored from the Flagship data plane (`packages/data-plane/src/evaluate.ts`)
-// at commit f32a8bf1607a7493175ea3a919f56dcd6b8a4fca.
-//
-// The hashing and rule-matching behaviour must stay byte-for-byte compatible
-// with production, otherwise local percentage rollouts bucket differently to
-// deployed Workers. `test/plugins/flagship/evaluate.spec.ts` pins the upstream
-// hash vectors — update this file and those vectors together.
+import type { Condition, FlagInput, FlagValue, Rule } from "./flags";
 
-export type FlagValue =
-	| boolean
-	| string
-	| number
-	| Record<string, unknown>
-	| unknown[];
+// Vendored from Flagship data-plane commit f32a8bf1607a7493175ea3a919f56dcd6b8a4fca.
+// Hashing and matching must remain byte-compatible with production.
 
 export type EvaluationReason =
 	| "TARGETING_MATCH"
@@ -30,6 +20,9 @@ export type EvaluationContext = Record<string, unknown>;
 
 export type FlagType = "boolean" | "string" | "number" | "object";
 
+export type EvalRule = Omit<Rule, "priority">;
+export type EvalFlag = Omit<FlagInput, "rules"> & { rules: EvalRule[] };
+
 export interface EvaluationDetails<T> {
 	flagKey: string;
 	value: T;
@@ -37,51 +30,6 @@ export interface EvaluationDetails<T> {
 	reason: EvaluationReason;
 	errorCode?: ErrorCode;
 	errorMessage?: string;
-}
-
-export type Operator =
-	| "equals"
-	| "not_equals"
-	| "greater_than"
-	| "less_than"
-	| "greater_than_or_equals"
-	| "less_than_or_equals"
-	| "contains"
-	| "starts_with"
-	| "ends_with"
-	| "in"
-	| "not_in";
-
-export interface BaseCondition {
-	attribute: string;
-	operator: Operator;
-	value: unknown;
-}
-
-export interface LogicalCondition {
-	logical_operator: "AND" | "OR";
-	clauses: Condition[];
-}
-
-export type Condition = BaseCondition | LogicalCondition;
-
-export interface Rollout {
-	percentage: number;
-	attribute?: string;
-}
-
-export interface EvalRule {
-	conditions: Condition[];
-	serve_variation: string;
-	rollout?: Rollout;
-}
-
-export interface EvalFlag {
-	key: string;
-	enabled: boolean;
-	default_variation: string;
-	variations: Record<string, unknown>;
-	rules: EvalRule[];
 }
 
 export class TypeCastError extends Error {
@@ -229,7 +177,7 @@ function evaluateCondition(
 }
 
 export function evaluateFlag(
-	flagDef: EvalFlag,
+	flagDef: EvalFlag | FlagInput,
 	context: EvaluationContext,
 	accountId: string
 ): { value: FlagValue; variant: string; reason: EvaluationReason } {
@@ -255,7 +203,12 @@ export function evaluateFlag(
 	// buckets across flags, preventing correlated rollouts.
 	let seed: number | undefined;
 
-	for (const rule of flagDef.rules) {
+	const rules = [...flagDef.rules].sort((a, b) => {
+		const aPriority = "priority" in a ? a.priority : 0;
+		const bPriority = "priority" in b ? b.priority : 0;
+		return aPriority - bPriority;
+	});
+	for (const rule of rules) {
 		let ruleMatches = true;
 
 		for (const condition of rule.conditions) {
@@ -291,6 +244,15 @@ export function evaluateFlag(
 
 	return serve(flagDef.default_variation, "DEFAULT");
 }
+
+export type {
+	BaseCondition,
+	Condition,
+	FlagValue,
+	LogicalCondition,
+	Operator,
+	Rollout,
+} from "./flags";
 
 export function matchesType(value: FlagValue, expectedType: FlagType): boolean {
 	switch (expectedType) {

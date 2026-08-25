@@ -6,7 +6,7 @@ import {
 	matchesType,
 	TypeCastError,
 } from "./evaluate";
-import { flagNotFoundMessage, toEvalFlag } from "./flags";
+import { flagNotFoundMessage } from "./flags";
 import type { FlagshipAdmin } from "./admin";
 import type {
 	ErrorCode,
@@ -23,8 +23,7 @@ interface Env {
 	store: DurableObjectNamespace<FlagshipObject>;
 }
 
-// `name` is deliberately left as "Error": workerd's RPC serialisation prefixes
-// unrecognised error names onto the message, which leaks into CLI output.
+// Keep the default name: workerd prefixes custom error names during RPC serialization.
 class FlagNotFoundError extends Error {
 	constructor(flagKey: string) {
 		super(flagNotFoundMessage(flagKey));
@@ -94,7 +93,7 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 			warnIfBucketingUnseeded(flag);
 		}
 		const { value, variant, reason } = evaluateFlag(
-			toEvalFlag(flag),
+			flag,
 			context,
 			accountTag ?? this.env.config.accountTag
 		);
@@ -107,6 +106,17 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 		expectedType: FlagType,
 		context?: EvaluationContext
 	): Promise<EvaluationDetails<T>> {
+		const failure = (
+			errorCode: ErrorCode,
+			errorMessage: string
+		): EvaluationDetails<T> => ({
+			flagKey,
+			value: defaultValue,
+			variant: "default",
+			reason: "ERROR",
+			errorCode,
+			errorMessage,
+		});
 		let result: EvaluationDetails<FlagValue>;
 		try {
 			result = await this.#evaluate(flagKey, context ?? {});
@@ -115,30 +125,18 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 			if (errorCode === undefined) {
 				throw error;
 			}
-			return {
-				flagKey,
-				value: defaultValue,
-				variant: "default",
-				reason: "ERROR",
-				errorCode,
-				errorMessage: (error as Error).message,
-			};
+			return failure(errorCode, (error as Error).message);
 		}
 
 		if (!matchesType(result.value, expectedType)) {
-			return {
-				flagKey,
-				value: defaultValue,
-				variant: "default",
-				reason: "ERROR",
-				errorCode: "TYPE_MISMATCH",
-				errorMessage: new TypeCastError(flagKey, expectedType, result.value)
-					.message,
-			};
+			return failure(
+				"TYPE_MISMATCH",
+				new TypeCastError(flagKey, expectedType, result.value).message
+			);
 		}
 
 		return {
-			flagKey: result.flagKey,
+			flagKey,
 			value: result.value as T,
 			variant: result.variant,
 			reason: result.reason,
@@ -230,7 +228,7 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 
 	[ADMIN_API](): FlagshipAdmin {
 		const stub = this.#stub;
-		const unwrap = (result: WriteResult, flagKey: string): Flag => {
+		function unwrap(result: WriteResult, flagKey: string): Flag {
 			switch (result.status) {
 				case "written":
 					return result.flag;
@@ -241,30 +239,35 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 				case "invalid":
 					throw new Error(result.message);
 			}
-		};
+		}
+		async function getFlag(flagKey: string): Promise<Flag> {
+			const flag = await stub.get(flagKey);
+			if (flag === null) {
+				throw new FlagNotFoundError(flagKey);
+			}
+			return flag;
+		}
+		async function write(
+			operation: Promise<WriteResult>,
+			flagKey: string
+		): Promise<Flag> {
+			return unwrap(await operation, flagKey);
+		}
 
 		return {
 			listFlags: (): Promise<Flag[]> => stub.list(),
-			getFlag: async (flagKey: string): Promise<Flag> => {
-				const flag = await stub.get(flagKey);
-				if (flag === null) {
-					throw new FlagNotFoundError(flagKey);
-				}
-				return flag;
-			},
+			getFlag,
 			getAccountTag: (): Promise<string | null> => stub.getAccountTag(),
 			setAccountTag: (accountTag: string): Promise<void> => {
 				validateAccountTag(accountTag);
 				return stub.setAccountTag(accountTag);
 			},
-			createFlag: async (input: FlagInput): Promise<Flag> =>
-				unwrap(await stub.create(input), input.key),
-			updateFlag: async (flagKey: string, input: FlagInput): Promise<Flag> =>
-				unwrap(await stub.update(flagKey, input), flagKey),
-			patchFlag: async (flagKey: string, changes: FlagChanges): Promise<Flag> =>
-				unwrap(await stub.patch(flagKey, changes), flagKey),
-			putFlag: async (input: FlagInput): Promise<Flag> =>
-				unwrap(await stub.put(input), input.key),
+			createFlag: (input) => write(stub.create(input), input.key),
+			updateFlag: (flagKey, input) =>
+				write(stub.update(flagKey, input), flagKey),
+			patchFlag: (flagKey, changes) =>
+				write(stub.patch(flagKey, changes), flagKey),
+			putFlag: (input) => write(stub.put(input), input.key),
 			putFlags: async (
 				inputs: FlagInput[],
 				accountTag: string

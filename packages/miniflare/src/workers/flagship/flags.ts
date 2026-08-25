@@ -1,12 +1,42 @@
-import type {
-	Condition,
-	EvalFlag,
-	FlagValue,
-	Operator,
-	Rollout,
-} from "./evaluate";
-
 export type FlagType = "boolean" | "string" | "number" | "json";
+
+export type FlagValue =
+	| boolean
+	| string
+	| number
+	| Record<string, unknown>
+	| unknown[];
+
+export type Operator =
+	| "equals"
+	| "not_equals"
+	| "greater_than"
+	| "less_than"
+	| "greater_than_or_equals"
+	| "less_than_or_equals"
+	| "contains"
+	| "starts_with"
+	| "ends_with"
+	| "in"
+	| "not_in";
+
+export interface BaseCondition {
+	attribute: string;
+	operator: Operator;
+	value: unknown;
+}
+
+export interface LogicalCondition {
+	logical_operator: "AND" | "OR";
+	clauses: Condition[];
+}
+
+export type Condition = BaseCondition | LogicalCondition;
+
+export interface Rollout {
+	percentage: number;
+	attribute?: string;
+}
 
 export interface Rule {
 	priority: number;
@@ -73,22 +103,6 @@ export function getFlagType(variations: Record<string, unknown>): FlagType {
 		default:
 			return "json";
 	}
-}
-
-export function toEvalFlag(flag: Flag): EvalFlag {
-	return {
-		key: flag.key,
-		enabled: flag.enabled,
-		default_variation: flag.default_variation,
-		variations: flag.variations,
-		rules: [...flag.rules]
-			.sort((a, b) => a.priority - b.priority)
-			.map(({ conditions, serve_variation, rollout }) => ({
-				conditions,
-				serve_variation,
-				rollout,
-			})),
-	};
 }
 
 function validateCondition(
@@ -255,11 +269,9 @@ export function toStoredFlag(input: FlagInput): Flag {
 		enabled: input.enabled,
 		default_variation: input.default_variation,
 		variations: input.variations,
-		// The evaluator walks this array in order, so `priority` must decide it.
+		// Evaluation order is defined by priority, not input array order.
 		rules: [...input.rules].sort((a, b) => a.priority - b.priority),
 		type: getFlagType(input.variations),
 		updated_at: new Date().toISOString(),
 	};
 }
-
-export type { Condition, FlagValue, Rollout };
