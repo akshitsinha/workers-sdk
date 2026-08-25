@@ -14,9 +14,9 @@ import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 export const FLAGSHIP_PLUGIN_NAME = "flagship";
-const FLAGSHIP_REMOTE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:internal:remote`;
-const FLAGSHIP_OBJECT_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:internal:object`;
-const FLAGSHIP_STORAGE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:internal:storage`;
+const FLAGSHIP_REMOTE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}-internal:remote`;
+const FLAGSHIP_OBJECT_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}-internal:object`;
+const FLAGSHIP_STORAGE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}-internal:storage`;
 const FLAGSHIP_OBJECT_CLASS_NAME = "FlagshipObject";
 
 // Rollout bucketing is seeded with the account tag. Local flag definitions are

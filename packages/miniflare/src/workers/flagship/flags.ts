@@ -105,6 +105,13 @@ function isJsonValue(value: unknown, seen = new Set<object>()): boolean {
 	if (typeof value !== "object" || seen.has(value)) {
 		return false;
 	}
+	if (
+		!Array.isArray(value) &&
+		Object.getPrototypeOf(value) !== Object.prototype &&
+		Object.getPrototypeOf(value) !== null
+	) {
+		return false;
+	}
 
 	seen.add(value);
 	const values = Array.isArray(value) ? value : Object.values(value);

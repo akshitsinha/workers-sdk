@@ -142,9 +142,9 @@ describe("flagship plugin", () => {
 	}) => {
 		const mf = new Miniflare(
 			options({
-				OBJECT: { type: "flagship", id: "object" },
-				REMOTE: { type: "flagship", id: "remote" },
-				STORAGE: { type: "flagship", id: "storage" },
+				OBJECT: { type: "flagship", id: "internal:object" },
+				REMOTE: { type: "flagship", id: "internal:remote" },
+				STORAGE: { type: "flagship", id: "internal:storage" },
 			})
 		);
 		useDispose(mf);
@@ -263,6 +263,10 @@ describe("flagship plugin", () => {
 			[{ variations: { on: null, off: null } }, "variations cannot be null"],
 			[
 				{ variations: { on: Number.POSITIVE_INFINITY, off: 0 } },
+				"variations must contain values that can be stored as JSON",
+			],
+			[
+				{ variations: { on: new Date(), off: {} } },
 				"variations must contain values that can be stored as JSON",
 			],
 			[
