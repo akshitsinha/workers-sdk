@@ -1595,7 +1595,11 @@ export const zFlagshipListFlagsData = z.object({
 	path: z.object({
 		app_id: z.string(),
 	}),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1619,7 +1623,11 @@ export const zFlagshipCreateFlagData = z.object({
 	path: z.object({
 		app_id: z.string(),
 	}),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1637,7 +1645,11 @@ export const zFlagshipDeleteFlagData = z.object({
 		app_id: z.string(),
 		flag_key: z.string(),
 	}),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1659,7 +1671,11 @@ export const zFlagshipGetFlagData = z.object({
 		app_id: z.string(),
 		flag_key: z.string(),
 	}),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1683,7 +1699,11 @@ export const zFlagshipUpdateFlagData = z.object({
 		app_id: z.string(),
 		flag_key: z.string(),
 	}),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1703,7 +1723,11 @@ export const zFlagshipEvaluateFlagData = z.object({
 		app_id: z.string(),
 		flag_key: z.string(),
 	}),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**

@@ -1,6 +1,16 @@
 import { EMAIL_OPENAPI_SCHEMAS } from "./email-openapi";
 import type { FilterConfig } from "./filter-openapi";
 
+function flagshipWorkerParameter() {
+	return {
+		description: "Worker whose local Flagship store should be used.",
+		in: "query" as const,
+		name: "worker",
+		required: false,
+		schema: { type: "string" as const },
+	};
+}
+
 /**
  * Configuration for filtering Cloudflare's OpenAPI spec for local explorer.
  * This defines which endpoints to include and what features to ignore.
@@ -1855,6 +1865,7 @@ const config = {
 							required: true,
 							schema: { type: "string" },
 						},
+						flagshipWorkerParameter(),
 					],
 					responses: {
 						"200": {
@@ -1906,6 +1917,7 @@ const config = {
 							required: true,
 							schema: { type: "string" },
 						},
+						flagshipWorkerParameter(),
 					],
 					requestBody: {
 						content: {
@@ -2004,6 +2016,7 @@ const config = {
 							required: true,
 							schema: { type: "string" },
 						},
+						flagshipWorkerParameter(),
 					],
 					responses: {
 						"200": {
@@ -2059,6 +2072,7 @@ const config = {
 							required: true,
 							schema: { type: "string" },
 						},
+						flagshipWorkerParameter(),
 					],
 					requestBody: {
 						content: {
@@ -2152,6 +2166,7 @@ const config = {
 							required: true,
 							schema: { type: "string" },
 						},
+						flagshipWorkerParameter(),
 					],
 					responses: {
 						"200": {
@@ -2212,6 +2227,7 @@ const config = {
 							required: true,
 							schema: { type: "string" },
 						},
+						flagshipWorkerParameter(),
 					],
 					requestBody: {
 						content: {

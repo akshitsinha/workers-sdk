@@ -2482,6 +2482,15 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
 					}
 				],
 				"responses": {
@@ -2532,6 +2541,15 @@
 						"in": "path",
 						"name": "app_id",
 						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
 						"schema": {
 							"type": "string"
 						}
@@ -2637,6 +2655,15 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
 					}
 				],
 				"responses": {
@@ -2692,6 +2719,15 @@
 						"in": "path",
 						"name": "flag_key",
 						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
 						"schema": {
 							"type": "string"
 						}
@@ -2790,6 +2826,15 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
 					}
 				],
 				"responses": {
@@ -2852,6 +2897,15 @@
 						"in": "path",
 						"name": "flag_key",
 						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
 						"schema": {
 							"type": "string"
 						}
