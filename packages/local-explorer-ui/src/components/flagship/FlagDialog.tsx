@@ -1,4 +1,12 @@
-import { Banner, Button, Dialog, Label, Switch, Tabs } from "@cloudflare/kumo";
+import {
+	Banner,
+	Button,
+	Dialog,
+	Label,
+	Switch,
+	Table,
+	Tabs,
+} from "@cloudflare/kumo";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flagshipCreateFlag, flagshipUpdateFlag } from "../../api";
@@ -479,86 +487,103 @@ export function FlagDialog({
 							</p>
 						</div>
 
-						<div className="overflow-hidden rounded-lg border border-kumo-fill">
-							<div className="grid grid-cols-[3rem_minmax(0,1fr)_minmax(0,1.5fr)_2.25rem] items-center gap-3 border-b border-kumo-fill bg-kumo-elevated px-3 py-2 text-xs font-medium text-kumo-subtle">
-								<span className="text-center">Default</span>
-								<span>Label</span>
-								<span>Value</span>
-								<span />
-							</div>
-							{form.variations.map((row) => (
-								<div
-									className="grid grid-cols-[3rem_minmax(0,1fr)_minmax(0,1.5fr)_2.25rem] items-center gap-3 border-b border-kumo-fill px-3 py-2 last:border-b-0"
-									key={row.id}
-								>
-									<input
-										aria-label={`Use ${row.name || "variant"} by default`}
-										checked={form.defaultVariationId === row.id}
-										className="size-4 justify-self-center accent-kumo-brand"
-										disabled={saving}
-										name="default-variation"
-										onChange={() =>
-											setForm((current) => ({
-												...current,
-												defaultVariationId: row.id,
-											}))
-										}
-										type="radio"
-									/>
-									<TextInput
-										ariaLabel={`Label for ${row.name || "variant"}`}
-										disabled={saving}
-										invalid={
-											error?.variationId === row.id &&
-											error.variationField === "name"
-										}
-										mono
-										onEnter={() => void handleSave()}
-										onValueChange={(value) =>
-											updateVariation(row.id, {
-												name: value.replaceAll(" ", "-"),
-											})
-										}
-										placeholder="label"
-										value={row.name}
-									/>
-									{isBoolean ? (
-										<span className="flex h-9 items-center rounded-lg bg-kumo-elevated px-3 font-mono text-sm text-kumo-subtle ring-1 ring-kumo-fill">
-											{row.value}
-										</span>
-									) : (
-										<TextInput
-											ariaLabel={`Value for ${row.name || "variant"}`}
-											disabled={saving}
-											invalid={
-												error?.variationId === row.id &&
-												error.variationField === "value"
-											}
-											mono
-											numeric={form.type === "number"}
-											onEnter={() => void handleSave()}
-											onValueChange={(value) =>
-												updateVariation(row.id, { value })
-											}
-											placeholder="value"
-											value={row.value}
-										/>
-									)}
-									{form.variations.length < 3 ? (
-										<span />
-									) : (
-										<Button
-											aria-label={`Remove ${row.name || "variant"}`}
-											className="justify-self-center text-kumo-subtle hover:text-kumo-danger"
-											disabled={saving}
-											icon={<TrashIcon size={14} />}
-											onClick={() => removeVariation(row.id)}
-											shape="square"
-											variant="ghost"
-										/>
-									)}
-								</div>
-							))}
+						<div className="overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
+							<Table aria-label="Variants">
+								<Table.Header>
+									<Table.Row>
+										<Table.Head className="w-12 text-center text-xs font-medium text-kumo-subtle">
+											Default
+										</Table.Head>
+										<Table.Head className="text-xs font-medium text-kumo-subtle">
+											Label
+										</Table.Head>
+										<Table.Head className="text-xs font-medium text-kumo-subtle">
+											Value
+										</Table.Head>
+										<Table.Head className="w-9">
+											<span className="sr-only">Remove variant</span>
+										</Table.Head>
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
+									{form.variations.map((row) => (
+										<Table.Row key={row.id}>
+											<Table.Cell className="text-center">
+												<input
+													aria-label={`Use ${row.name || "variant"} by default`}
+													checked={form.defaultVariationId === row.id}
+													className="size-4 accent-kumo-brand"
+													disabled={saving}
+													name="default-variation"
+													onChange={() =>
+														setForm((current) => ({
+															...current,
+															defaultVariationId: row.id,
+														}))
+													}
+													type="radio"
+												/>
+											</Table.Cell>
+											<Table.Cell>
+												<TextInput
+													ariaLabel={`Label for ${row.name || "variant"}`}
+													disabled={saving}
+													invalid={
+														error?.variationId === row.id &&
+														error.variationField === "name"
+													}
+													mono
+													onEnter={() => void handleSave()}
+													onValueChange={(value) =>
+														updateVariation(row.id, {
+															name: value.replaceAll(" ", "-"),
+														})
+													}
+													placeholder="label"
+													value={row.name}
+												/>
+											</Table.Cell>
+											<Table.Cell>
+												{isBoolean ? (
+													<span className="font-mono text-sm text-kumo-subtle">
+														{row.value}
+													</span>
+												) : (
+													<TextInput
+														ariaLabel={`Value for ${row.name || "variant"}`}
+														disabled={saving}
+														invalid={
+															error?.variationId === row.id &&
+															error.variationField === "value"
+														}
+														mono
+														numeric={form.type === "number"}
+														onEnter={() => void handleSave()}
+														onValueChange={(value) =>
+															updateVariation(row.id, { value })
+														}
+														placeholder="value"
+														value={row.value}
+													/>
+												)}
+											</Table.Cell>
+											<Table.Cell className="text-right">
+												{form.variations.length < 3 ? null : (
+													<Button
+														aria-label={`Remove ${row.name || "variant"}`}
+														className="text-kumo-subtle hover:text-kumo-danger"
+														disabled={saving}
+														icon={<TrashIcon size={14} />}
+														onClick={() => removeVariation(row.id)}
+														shape="square"
+														variant="ghost"
+													/>
+												)}
+											</Table.Cell>
+										</Table.Row>
+									))}
+								</Table.Body>
+							</Table>
 						</div>
 
 						{isBoolean ? null : (
