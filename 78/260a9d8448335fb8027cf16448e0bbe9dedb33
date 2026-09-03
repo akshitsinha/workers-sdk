@@ -1,0 +1,23 @@
+packages/miniflare/src/plugins/flagship/index.ts
+  s_b0997ccd73d1b9::t_0574c717c55b75 9,15,22-26,34-48,51,69,95-100,130-132,146-147
+packages/miniflare/src/workers/flagship/binding.worker.ts
+  s_b0997ccd73d1b9::t_6a39d17db5f8e8 25-29,65,79,82,102
+packages/miniflare/test/plugins/flagship/index.spec.ts
+  s_b0997ccd73d1b9::t_9cb7c3308f9a15 142-180,591
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "78260a9d8448335fb8027cf16448e0bbe9dedb33",
+  "prompts": {},
+  "sessions": {
+    "s_b0997ccd73d1b9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ff1a61e35ffejsmUVfN4SqHeQh",
+        "model": "grok-4.6"
+      },
+      "human_author": "Akshit Sinha <asinha@cloudflare.com>"
+    }
+  }
+}
