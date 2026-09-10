@@ -1,0 +1,27 @@
+fixtures/worker-with-resources/worker-configuration.d.ts
+  s_b0997ccd73d1b9::t_3398152c1e10d6 2,12,15
+fixtures/worker-with-resources/wrangler.jsonc
+  s_b0997ccd73d1b9::t_bb57bf83dd89c2 46-51
+packages/wrangler/src/__tests__/dev/start-dev.test.ts
+  s_b0997ccd73d1b9::t_db8c7ee0845854 112-114
+packages/wrangler/src/dev/start-dev.ts
+  s_b0997ccd73d1b9::t_0458ec90e893e8 388
+packages/miniflare/src/plugins/core/explorer.ts
+  s_b0997ccd73d1b9::t_5787bcddbbe975 13,203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ac8479f34b8c91b6b409045d733ec28d3092f0c3",
+  "prompts": {},
+  "sessions": {
+    "s_b0997ccd73d1b9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ff1a61e35ffejsmUVfN4SqHeQh",
+        "model": "grok-4.6"
+      },
+      "human_author": "Akshit Sinha <asinha@cloudflare.com>"
+    }
+  }
+}
