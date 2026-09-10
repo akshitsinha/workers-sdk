@@ -1,0 +1,82 @@
+packages/wrangler/src/flagship/store.ts
+  s_b0997ccd73d1b9::t_9b8ff1713a43b5 1-200
+packages/wrangler/src/flagship/flags/split.ts
+  s_b0997ccd73d1b9::t_1a27d3dcda094e 4,7,65,70-79,81-101,103-115,118
+packages/wrangler/src/__tests__/print-bindings.test.ts
+  s_b0997ccd73d1b9::t_89ee475a37ddb1 7-10,14,151-177
+packages/workers-utils/src/config/binding-local-support.ts
+  s_b0997ccd73d1b9::t_dcb835ab5bc759 60
+packages/wrangler/src/__tests__/flagship.test.ts
+  s_b0997ccd73d1b9::t_d385638a94d2f3 1
+  s_b0997ccd73d1b9::t_b9c47cfaf67d8e 2-3,9,12-15,115-125,1763-1968
+fixtures/worker-with-resources/wrangler.jsonc
+  s_b0997ccd73d1b9::t_722488b7e19c04 46-51
+packages/wrangler/src/flagship/flags/rollout.ts
+  s_b0997ccd73d1b9::t_fc3eb340ea8cf5 4,7,68,82-123,125
+packages/wrangler/src/flagship/render.ts
+  s_b0997ccd73d1b9::t_bccf0fdf8a1b1f 8,121-127
+packages/wrangler/src/flagship/flags/rules/delete.ts
+  s_b0997ccd73d1b9::t_97252638acf7cf 4,6,39,49-54
+packages/wrangler/src/__tests__/dev/start-dev.test.ts
+  s_b0997ccd73d1b9::t_018bb98c4f57b9 112-114
+packages/wrangler/src/flagship/flags/rules/update.ts
+  s_b0997ccd73d1b9::t_6f3571ddf6fb32 4,11,76,111-140
+packages/wrangler/src/flagship/flags/enable.ts
+  s_b0997ccd73d1b9::t_b7114e5059348e 4,6,36,41-49,51-58
+packages/wrangler/src/flagship/flags/get.ts
+  s_b0997ccd73d1b9::t_3ff30136a212c4 4,31,34-38
+packages/wrangler/src/flagship/flags/pull.ts
+  s_b0997ccd73d1b9::t_4ca6e7ca0173b0 1-79
+packages/wrangler/src/flagship/flags/rules/list.ts
+  s_b0997ccd73d1b9::t_fd8e334e65571a 3,31,34-38
+packages/wrangler/src/index.ts
+  s_b0997ccd73d1b9::t_77a539e2d7015d 194,1646-1649
+packages/wrangler/src/flagship/flags/evaluate.ts
+  s_b0997ccd73d1b9::t_1af10ad01c6711 5,49,58-60
+.changeset/local-flagship-wrangler.md
+  s_b0997ccd73d1b9::t_d875bf9b907da5 1-11
+packages/wrangler/src/flagship/client.ts
+  s_b0997ccd73d1b9::t_a9b930a143de00 99-100
+packages/wrangler/src/flagship/flags/set.ts
+  s_b0997ccd73d1b9::t_e683b975212886 4,6,44,49-61
+packages/workers-utils/src/config/environment.ts
+  s_b0997ccd73d1b9::t_3d5c86ab416988 1749
+packages/wrangler/src/flagship/flags/list.ts
+  s_b0997ccd73d1b9::t_9eceb5288be277 7,43,46-47,55-63
+packages/workers-utils/src/print-bindings.ts
+  s_b0997ccd73d1b9::t_8eb531a27e3d8f 496,502
+fixtures/worker-with-resources/worker-configuration.d.ts
+  s_b0997ccd73d1b9::t_006fc8a2d9bf97 2,12,15
+packages/wrangler/src/flagship/flags/create.ts
+  s_b0997ccd73d1b9::t_4342edf6e2512e 12,90,106-115
+packages/wrangler/src/__tests__/dev/remote-bindings.test.ts
+  s_b0997ccd73d1b9::t_53d15ea0d7d3c9 342-370
+packages/wrangler/src/dev/miniflare/index.ts
+  s_b0997ccd73d1b9::t_21b38c78e716ce 30,244-257,927-929
+packages/wrangler/src/dev/start-dev.ts
+  s_b0997ccd73d1b9::t_6349a8827b59d6 388
+packages/wrangler/src/flagship/flags/update.ts
+  s_b0997ccd73d1b9::t_27a5c442b3e4bb 13,126,131-132,134-143,145-147,149-167,169-179,181-183,185-198
+packages/wrangler/src/flagship/flags/delete.ts
+  s_b0997ccd73d1b9::t_120f0dc23350da 5,39,60-65
+packages/workers-utils/tests/config/binding-local-support.test.ts
+  s_b0997ccd73d1b9::t_bc7b67d9a4dcf9 90-92
+packages/wrangler/src/flagship/flags/rules/reorder.ts
+  s_b0997ccd73d1b9::t_2c157ba6f34d76 4,6,49,54-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8a5348fd5f9c1d6af91d05772a859f023ed41071",
+  "prompts": {},
+  "sessions": {
+    "s_b0997ccd73d1b9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ff1a61e35ffejsmUVfN4SqHeQh",
+        "model": "grok-4.6"
+      },
+      "human_author": "Akshit Sinha <asinha@cloudflare.com>"
+    }
+  }
+}
