@@ -1,0 +1,19 @@
+packages/miniflare/src/plugins/core/explorer.ts
+  s_b0997ccd73d1b9::t_5787bcddbbe975 13,203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bc4a402fbc1ff2352b5d7275434a22897e2a1f84",
+  "prompts": {},
+  "sessions": {
+    "s_b0997ccd73d1b9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ff1a61e35ffejsmUVfN4SqHeQh",
+        "model": "grok-4.6"
+      },
+      "human_author": "Akshit Sinha <asinha@cloudflare.com>"
+    }
+  }
+}
