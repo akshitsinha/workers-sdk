@@ -1,0 +1,167 @@
+packages/wrangler/src/flagship/store.ts
+  s_b0997ccd73d1b9::t_9b8ff1713a43b5 1-200,1-123,2,7-74,92,93,94-99,101-123,131-200
+packages/wrangler/src/flagship/flags/split.ts
+  s_b0997ccd73d1b9::t_1a27d3dcda094e 4,7,65,70-79,81-101,103-115,118
+packages/wrangler/src/__tests__/print-bindings.test.ts
+  s_b0997ccd73d1b9::t_89ee475a37ddb1 7-10,14,151-177
+packages/workers-utils/src/config/binding-local-support.ts
+  s_b0997ccd73d1b9::t_dcb835ab5bc759 60
+packages/wrangler/src/__tests__/flagship.test.ts
+  s_b0997ccd73d1b9::t_d385638a94d2f3 1
+  s_b0997ccd73d1b9::t_b9c47cfaf67d8e 2-3,2,9,12-15,115-125,1763-1968,1763-1827,1845-1847,1850,1851-1854,1856-1859,1860,1861-1968
+packages/wrangler/src/flagship/flags/rollout.ts
+  s_b0997ccd73d1b9::t_fc3eb340ea8cf5 4,7,68,82-123,125
+packages/wrangler/src/flagship/render.ts
+  s_b0997ccd73d1b9::t_bccf0fdf8a1b1f 8,121-127
+packages/wrangler/src/flagship/flags/rules/delete.ts
+  s_b0997ccd73d1b9::t_97252638acf7cf 4,6,39,49-54
+packages/wrangler/src/flagship/flags/rules/update.ts
+  s_b0997ccd73d1b9::t_6f3571ddf6fb32 4,11,76,111-140
+packages/wrangler/src/flagship/flags/enable.ts
+  s_b0997ccd73d1b9::t_b7114e5059348e 4,6,36,41-49,51-58
+packages/wrangler/src/flagship/flags/get.ts
+  s_b0997ccd73d1b9::t_3ff30136a212c4 4,31,34-38
+packages/wrangler/src/flagship/flags/pull.ts
+  s_b0997ccd73d1b9::t_4ca6e7ca0173b0 1-79
+packages/wrangler/src/flagship/flags/rules/list.ts
+  s_b0997ccd73d1b9::t_fd8e334e65571a 3,31,34-38
+packages/wrangler/src/index.ts
+  s_b0997ccd73d1b9::t_77a539e2d7015d 194,1644-1647
+packages/wrangler/src/flagship/flags/evaluate.ts
+  s_b0997ccd73d1b9::t_1af10ad01c6711 5,49,58-60
+.changeset/local-flagship-wrangler.md
+  s_b0997ccd73d1b9::t_d875bf9b907da5 1-11,1-3,4-11
+packages/wrangler/src/flagship/client.ts
+  s_b0997ccd73d1b9::t_a9b930a143de00 99-100
+packages/wrangler/src/flagship/flags/set.ts
+  s_b0997ccd73d1b9::t_e683b975212886 4,6,44,49-61
+packages/workers-utils/src/config/environment.ts
+  s_b0997ccd73d1b9::t_3d5c86ab416988 1741
+packages/wrangler/src/flagship/flags/list.ts
+  s_b0997ccd73d1b9::t_9eceb5288be277 7,43,46-47,55-63
+packages/workers-utils/src/print-bindings.ts
+  s_b0997ccd73d1b9::t_8eb531a27e3d8f 484,490
+packages/wrangler/src/flagship/flags/create.ts
+  s_b0997ccd73d1b9::t_4342edf6e2512e 12,90,106-115
+packages/wrangler/src/__tests__/dev/remote-bindings.test.ts
+  s_b0997ccd73d1b9::t_53d15ea0d7d3c9 342-370
+packages/wrangler/src/dev/miniflare/index.ts
+  s_b0997ccd73d1b9::t_21b38c78e716ce 30,242-255,904-906
+packages/wrangler/src/flagship/flags/update.ts
+  s_b0997ccd73d1b9::t_27a5c442b3e4bb 13,126,131-132,134-143,145-147,149-167,169-179,181-183,185-198
+packages/wrangler/src/flagship/flags/delete.ts
+  s_b0997ccd73d1b9::t_120f0dc23350da 5,39,60-65
+packages/workers-utils/tests/config/binding-local-support.test.ts
+  s_b0997ccd73d1b9::t_bc7b67d9a4dcf9 90-92
+packages/wrangler/src/flagship/flags/rules/reorder.ts
+  s_b0997ccd73d1b9::t_2c157ba6f34d76 4,6,49,54-59
+packages/miniflare/test/plugins/flagship/index.spec.ts
+  s_b0997ccd73d1b9::t_9cb7c3308f9a15 142-180,542-544,566-568,591
+  s_d8e8140507ad23::t_f65e4781845bab 126-128
+packages/miniflare/src/workers/flagship/binding.worker.ts
+  s_b0997ccd73d1b9::t_6a39d17db5f8e8 25-29,65,79,82,102
+packages/miniflare/src/plugins/flagship/index.ts
+  s_b0997ccd73d1b9::t_0574c717c55b75 9,15,22-26,34-48,51,69,95-100,130-132,146-147
+.changeset/local-flagship-explorer.md
+  s_b0997ccd73d1b9::t_08b14b369021f4 1-10
+packages/local-explorer-ui/src/__e2e__/flagship/flagship.spec.ts
+  s_b0997ccd73d1b9::t_4b66e590cfa8c5 1-3,5-6,7-13,14-19,20-25,26,28,29-44,48,53,58,63,68,74,76,86-87,114-115,149-150,161-162,171-172,203,224,236-237
+packages/local-explorer-ui/src/__e2e__/utils.ts
+  s_b0997ccd73d1b9::t_1cf4153e2700b6 82-165,310-314
+packages/local-explorer-ui/src/__tests__/flagship/flag-helpers.test.ts
+  s_b0997ccd73d1b9::t_01b5bb21c4c02e 1-8,19-20,22,24-28,33-34,36-39,41,43-45,47,49-52,56
+packages/local-explorer-ui/src/__tests__/flagship/rule-helpers.test.ts
+  s_b0997ccd73d1b9::t_8a3d129bfd97fb 1-9,11-12,13-20,29-30,35-36,43-44,46-47,50,61-64,83-84,103-105,108-111,113-115,119-120,122-129,130,132-133,135-141,143-144,146-149,151-152,155-156,157,173,175,190-191,194,197,199,201-208,211,212,214-216,219,220,223,228-229,240-247
+packages/local-explorer-ui/src/__tests__/utils/agent-prompt.test.ts
+  s_b0997ccd73d1b9::t_41b6af520edf38 23-25
+packages/local-explorer-ui/src/__tests__/utils/sidebar-state.test.ts
+  s_b0997ccd73d1b9::t_718ccfddd9147a 116,165,193
+packages/local-explorer-ui/src/assets/icons/flagship.svg
+  s_b0997ccd73d1b9::t_8b6bd2374fb30f 1
+packages/local-explorer-ui/src/components/Sidebar.tsx
+  s_b0997ccd73d1b9::t_f8221fc62dbc71 19,125,244-259
+packages/local-explorer-ui/src/components/flagship/FlagDialog.tsx
+  s_b0997ccd73d1b9::t_74703d7f63e1e7 1-6,8-35,36-37,38,39-49,50-54,55-59,60,61-63,64-86,87-114,115-129,130-174,175-183,184-202,203-230,231-240,241-254,255-262,263-449,451-673
+packages/local-explorer-ui/src/components/flagship/FlagTable.tsx
+  s_b0997ccd73d1b9::t_05c25853da31c4 1-21,23-43,44-71,72-108,109-156,157-163,164-182,183-190,191-204,205-229,230-327,331-387
+packages/local-explorer-ui/src/components/flagship/FormFields.tsx
+  s_b0997ccd73d1b9::t_90391c03bb9910 1-21,22-36,37-81,82-107
+packages/local-explorer-ui/src/components/flagship/RuleEditor.tsx
+  s_b0997ccd73d1b9::t_5ffada71b6f51f 1-39,40-42,43-50,51-126,127-208,209-224,225-236,237-247,248-253,260-425,428-440,442-479,480-488,489-547
+packages/local-explorer-ui/src/components/flagship/TestFlagDialog.tsx
+  s_b0997ccd73d1b9::t_126a4624fbca61 1-49,50-60,61-74,75-84,85-90,91-104,105-143,144-152,153-159,160-192,193-205,206-412
+packages/local-explorer-ui/src/components/flagship/flag-helpers.ts
+  s_b0997ccd73d1b9::t_789cfe92f7ccdc 1-2,10-49,50-65,66-81,82-85,86-170,171,173-174
+packages/local-explorer-ui/src/components/flagship/rule-helpers.ts
+  s_b0997ccd73d1b9::t_14a346a1c29a1e 1-42,43-70,72,73-74,75-81,82,84-85,86-89,90-99,100-109,110-118,119-155,156,159-166,168-170,171-186,187-190,191-199,200-230,231-232,233-251,252-255,256-264,265-326
+packages/local-explorer-ui/src/components/workflows/Timestamp.tsx
+  s_b0997ccd73d1b9::t_e68e10f39ee526 2
+packages/local-explorer-ui/src/routeTree.gen.ts
+  s_b0997ccd73d1b9::t_38875edc4cb2b0 19,68-72,143,163,184,208,228,248,269,328-334,496
+packages/local-explorer-ui/src/routes/flagship/$appId.tsx
+  s_b0997ccd73d1b9::t_e15748c54af4ff 1-22,24-87,89-106,107,109-110,112-123,125,148,150-169,171-306,307-312,314-317,319-323,325-326,328-329,331-375
+packages/local-explorer-ui/src/routes/workflows/$workflowName/index.tsx
+  s_b0997ccd73d1b9::t_deb1ec2c8b8bb5 44
+packages/local-explorer-ui/src/utils/agent-prompt.ts
+  s_b0997ccd73d1b9::t_9b2f9df49597f5 1
+packages/local-explorer-ui/src/utils/sidebar-state.ts
+  s_b0997ccd73d1b9::t_86eb416910ccef 12,27
+packages/local-explorer-ui/src/utils/time.ts
+  s_b0997ccd73d1b9::t_f44e78b71a72b9 1-32
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_b0997ccd73d1b9::t_292c96b5ea9d23 1721-2192,2195-2304,2551-2557
+packages/miniflare/src/plugins/core/explorer.ts
+  s_b0997ccd73d1b9::t_8157d49052b2ab 13,16,18,38,199-213,246-247,255,258-267,392,457-468
+packages/miniflare/src/plugins/core/index.ts
+  s_b0997ccd73d1b9::t_8797ac5fe0345f 986-1004,1009-1010
+packages/miniflare/src/plugins/core/types.ts
+  s_b0997ccd73d1b9::t_3d89687d50ac34 11-17,64-68
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_b0997ccd73d1b9::t_71c82bbf253959 25-27,44-52,438-485
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_b0997ccd73d1b9::t_359b047273f34a 74-112
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_b0997ccd73d1b9::t_263bd3ed51c394 457-546,737-740,2676-2953
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_b0997ccd73d1b9::t_c33e9fa264cd88 382-418,510,1609-1748
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_b0997ccd73d1b9::t_baa778f3c6c7b2 2821-3308,4260-4398,4659-4665
+packages/miniflare/src/workers/local-explorer/resources/flagship.ts
+  s_b0997ccd73d1b9::t_b615bc3e5db672 1-82,83-89,91-189,190-293
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_b0997ccd73d1b9::t_a3b3eb17742ada 37-43
+packages/miniflare/test/plugins/local-explorer/aggregation.spec.ts
+  s_b0997ccd73d1b9::t_9fbfd34b671776 83,130,391-504
+packages/miniflare/test/plugins/local-explorer/flagship.spec.ts
+  s_b0997ccd73d1b9::t_4c3f5936d9c42f 1-16,18-29,52-81,83,109-110,121,137-138,145,151,156-157,176,186-187,195,201,211,213-214,220,226,233,245,250,259,262,271,272,276-280,282-284,290-291,313-314
+packages/miniflare/test/plugins/local-explorer/index.spec.ts
+  s_b0997ccd73d1b9::t_1266d6a0ea611a 761,791,814
+packages/vite-plugin-cloudflare/src/__tests__/agent-hint.spec.ts
+  s_b0997ccd73d1b9::t_a82be7bb6026ce 65-67,74
+packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts
+  s_b0997ccd73d1b9::t_0026cd012a15af 89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "afd28b01d8012f15beaa2f9419e7547e45372fd7",
+  "prompts": {},
+  "sessions": {
+    "s_b0997ccd73d1b9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ff1a61e35ffejsmUVfN4SqHeQh",
+        "model": "grok-4.6"
+      },
+      "human_author": "Akshit Sinha <asinha@cloudflare.com>"
+    },
+    "s_d8e8140507ad23": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9f3fab36ffekGx9YStqBeM1Re",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Akshit Sinha <asinha@cloudflare.com>"
+    }
+  }
+}
